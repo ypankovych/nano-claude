@@ -56,6 +56,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+minus", "resize_panel(-1)", "Shrink", id="resize.shrink", priority=True, show=True),
         # Toggle file tree
         Binding("ctrl+backslash", "toggle_file_tree", "Toggle Tree", id="toggle.tree", priority=True, show=True),
+        # Toggle hidden files in tree
+        Binding("ctrl+h", "toggle_hidden_files", "Hidden Files", id="tree.toggle_hidden", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
     ]
@@ -113,6 +115,14 @@ class NanoClaudeApp(App):
         new_val = max(0.5, current + delta * 0.5)  # 0.5fr step, minimum 0.5fr
         setattr(self, attr, new_val)
         self._apply_panel_widths()
+
+    def action_toggle_hidden_files(self) -> None:
+        """Toggle hidden file visibility in the file tree."""
+        try:
+            panel = self.query_one("#file-tree", FileTreePanel)
+            panel.action_toggle_hidden()
+        except Exception:
+            pass
 
     def action_toggle_file_tree(self) -> None:
         """Toggle file tree panel visibility."""

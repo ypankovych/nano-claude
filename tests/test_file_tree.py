@@ -72,7 +72,14 @@ class TestMaxFileSize:
 
 
 class TestFilteredDirectoryTreeFilterPaths:
-    """Test filter_paths method of FilteredDirectoryTree."""
+    """Test filter_paths method of FilteredDirectoryTree.
+
+    Note: FilteredDirectoryTree uses Textual reactive attributes. Setting them
+    outside a running app triggers watch methods that call self.reload(), which
+    requires an active event loop. To avoid this in unit tests, we:
+    - Rely on the default value (show_hidden=False) for filtering tests.
+    - Use the _reactive_show_hidden internal attribute for the show_hidden=True case.
+    """
 
     def _make_tree(self, tmp_path: Path) -> FilteredDirectoryTree:
         """Create a FilteredDirectoryTree instance rooted at tmp_path."""
@@ -87,7 +94,7 @@ class TestFilteredDirectoryTreeFilterPaths:
         (tmp_path / "README.md").touch()
 
         tree = self._make_tree(tmp_path)
-        tree.show_hidden = False
+        # show_hidden defaults to False
 
         paths = [tmp_path / n for n in [".git", "node_modules", "__pycache__", "src", "README.md"]]
         result = list(tree.filter_paths(paths))
@@ -106,7 +113,7 @@ class TestFilteredDirectoryTreeFilterPaths:
         (tmp_path / "main.py").touch()
 
         tree = self._make_tree(tmp_path)
-        tree.show_hidden = False
+        # show_hidden defaults to False
 
         paths = [tmp_path / n for n in [".gitignore", ".env", "main.py"]]
         result = list(tree.filter_paths(paths))
@@ -124,7 +131,8 @@ class TestFilteredDirectoryTreeFilterPaths:
         (tmp_path / "src").mkdir()
 
         tree = self._make_tree(tmp_path)
-        tree.show_hidden = True
+        # Bypass the reactive descriptor to avoid triggering watch_show_hidden
+        tree._reactive_show_hidden = True
 
         paths = [tmp_path / n for n in [".git", "node_modules", ".env", "src"]]
         result = list(tree.filter_paths(paths))
@@ -139,7 +147,7 @@ class TestFilteredDirectoryTreeFilterPaths:
         (tmp_path / "gamma_dir").mkdir()
 
         tree = self._make_tree(tmp_path)
-        tree.show_hidden = False
+        # show_hidden defaults to False
 
         paths = [
             tmp_path / "zebra.txt",
@@ -165,7 +173,7 @@ class TestFilteredDirectoryTreeFilterPaths:
         (tmp_path / "afile.txt").touch()
 
         tree = self._make_tree(tmp_path)
-        tree.show_hidden = False
+        # show_hidden defaults to False
 
         paths = [
             tmp_path / "Zebra_dir",
