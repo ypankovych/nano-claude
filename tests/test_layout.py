@@ -80,24 +80,26 @@ async def test_cli_entry_point_exists():
     assert callable(main)
 
 
-async def test_editor_shows_readme_when_exists(tmp_path, monkeypatch):
-    """When README.md exists in cwd, the editor placeholder contains 'README.md'."""
-    readme = tmp_path / "README.md"
-    readme.write_text("# Test Project")
-    monkeypatch.chdir(tmp_path)
+async def test_editor_has_code_editor_textarea():
+    """Editor panel composes a TextArea code editor (not the old Static placeholder)."""
+    from textual.widgets import TextArea
+
     app = NanoClaudeApp()
     async with app.run_test(size=(120, 40)) as pilot:
-        placeholder = app.query_one("#editor-placeholder")
-        assert "README.md" in placeholder.content
+        editor = app.query_one("#editor")
+        text_area = editor.query_one("#code-editor", TextArea)
+        assert text_area is not None
+        # Old placeholder should not exist
+        from textual.css.query import NoMatches
+        with pytest.raises(NoMatches):
+            app.query_one("#editor-placeholder")
 
 
-async def test_editor_shows_welcome_when_no_readme(tmp_path, monkeypatch):
-    """When no README.md exists, editor shows welcome text with shortcut hints."""
-    monkeypatch.chdir(tmp_path)
+async def test_editor_starts_with_empty_content():
+    """Editor starts with empty TextArea before any file is opened."""
+    from textual.widgets import TextArea
+
     app = NanoClaudeApp()
     async with app.run_test(size=(120, 40)) as pilot:
-        placeholder = app.query_one("#editor-placeholder")
-        text = placeholder.content
-        assert "Ctrl+b" in text
-        assert "Ctrl+e" in text
-        assert "Ctrl+r" in text
+        text_area = app.query_one("#code-editor", TextArea)
+        assert text_area.text == ""
