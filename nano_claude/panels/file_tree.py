@@ -69,7 +69,9 @@ class FilteredDirectoryTree(DirectoryTree):
             node_path = node.data
 
         if node_path and node_path.resolve() in self._modified_paths:
-            label.insert(0, "● ", style=RichStyle(color="orange1", bold=True))
+            label = Text.assemble(
+                ("● ", RichStyle(color="orange1", bold=True)), label
+            )
 
         return label
 
