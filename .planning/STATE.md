@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-22T16:31:43.281Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-22T16:37:55.449Z"
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -47,6 +47,7 @@ Plan: 2 of 2
 
 *Updated after each plan completion*
 | Phase 01-01 P01 | 5min | 2 tasks | 17 files |
+| Phase 01 P02 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Recent decisions affecting current work:
 - [Phase 01-01]: Used fr units (1fr/3.3fr/2.3fr) for panel widths -- auto-redistributes on toggle
 - [Phase 01-01]: Responsive collapse uses on_resize with call_later to defer after layout recalculation
 - [Phase 01-01]: BasePanel applies border styling via DEFAULT_CSS to avoid specificity conflicts with styles.tcss
+- [Phase 01-02]: Ctrl+b/e/r as primary focus bindings (Ctrl+number unreliable across terminals)
+- [Phase 01-02]: Tab/Shift+Tab for focus cycling (Ctrl+Tab intercepted by most terminal emulators)
+- [Phase 01-02]: 0.5fr resize step with 0.5fr minimum; all bindings have priority=True and id= for keymap overrides
 
 ### Pending Todos
 
@@ -72,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T16:31:43.279Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-03-22T16:37:55.447Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

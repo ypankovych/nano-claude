@@ -10,8 +10,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Layout
 
 - [x] **LAYOUT-01**: User sees a split-panel TUI with file tree (left), code editor (center), and Claude chat (right) on launch
-- [ ] **LAYOUT-02**: User can switch focus between panels using keyboard shortcuts
-- [ ] **LAYOUT-03**: User can resize panels using keyboard shortcuts
+- [x] **LAYOUT-02**: User can switch focus between panels using keyboard shortcuts
+- [x] **LAYOUT-03**: User can resize panels using keyboard shortcuts
 - [x] **LAYOUT-04**: Layout adapts gracefully when terminal is resized (panels collapse at small sizes)
 
 ### Editor
@@ -93,8 +93,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | LAYOUT-01 | Phase 1 | Complete |
-| LAYOUT-02 | Phase 1 | Pending |
-| LAYOUT-03 | Phase 1 | Pending |
+| LAYOUT-02 | Phase 1 | Complete |
+| LAYOUT-03 | Phase 1 | Complete |
 | LAYOUT-04 | Phase 1 | Complete |
 | EDIT-01 | Phase 2 | Pending |
 | EDIT-02 | Phase 2 | Pending |
