@@ -1,10 +1,15 @@
 """Main Textual App class with three-panel layout composition."""
 
+from __future__ import annotations
+
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
-from textual.widgets import Footer, Header
+from textual.screen import ModalScreen
+from textual.widgets import DirectoryTree, Footer, Header, Label
 
 from nano_claude.config.settings import (
     COLLAPSE_CHAT_THRESHOLD,
@@ -16,6 +21,58 @@ from nano_claude.config.settings import (
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel
+
+
+class UnsavedChangesScreen(ModalScreen[str]):
+    """Modal screen prompting user about unsaved changes before quitting.
+
+    Returns: "save" to save and quit, "discard" to quit without saving,
+    "cancel" to abort the quit.
+    """
+
+    DEFAULT_CSS = """
+    UnsavedChangesScreen {
+        align: center middle;
+    }
+    #unsaved-dialog {
+        width: 60;
+        height: auto;
+        max-height: 20;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+    #unsaved-dialog Label {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    """
+
+    BINDINGS = [
+        Binding("y", "save_quit", "Save & Quit", id="unsaved.save", priority=True),
+        Binding("n", "discard_quit", "Discard & Quit", id="unsaved.discard", priority=True),
+        Binding("c", "cancel_quit", "Cancel", id="unsaved.cancel", priority=True),
+        Binding("escape", "cancel_quit", "Cancel", id="unsaved.escape", priority=True),
+    ]
+
+    def __init__(self, unsaved_files: list[Path], **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._unsaved_files = unsaved_files
+
+    def compose(self) -> ComposeResult:
+        file_list = "\n".join(f"  - {p.name}" for p in self._unsaved_files)
+        with Vertical(id="unsaved-dialog"):
+            yield Label(f"Unsaved changes in:\n{file_list}")
+            yield Label("[Y]es save & quit  /  [N]o discard & quit  /  [C]ancel")
+
+    def action_save_quit(self) -> None:
+        self.dismiss("save")
+
+    def action_discard_quit(self) -> None:
+        self.dismiss("discard")
+
+    def action_cancel_quit(self) -> None:
+        self.dismiss("cancel")
 
 
 class NanoClaudeApp(App):
@@ -58,6 +115,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+backslash", "toggle_file_tree", "Toggle Tree", id="toggle.tree", priority=True, show=True),
         # Toggle hidden files in tree
         Binding("ctrl+h", "toggle_hidden_files", "Hidden Files", id="tree.toggle_hidden", priority=True, show=True),
+        # Save
+        Binding("ctrl+s", "save_file", "Save", id="file.save", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
     ]
@@ -172,6 +231,48 @@ class NanoClaudeApp(App):
             chat.remove_class("hidden")
 
         self._apply_panel_widths()
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        """Open selected file in the editor panel."""
+        editor = self.query_one(EditorPanel)
+        editor.open_file(event.path)
+        # Show relative path in app sub_title
+        try:
+            rel = event.path.relative_to(Path.cwd())
+            self.sub_title = str(rel)
+        except ValueError:
+            self.sub_title = event.path.name
+
+    def action_save_file(self) -> None:
+        """Save the current file in the editor (Ctrl+S)."""
+        editor = self.query_one(EditorPanel)
+        editor.save_current_file()
+
+    def action_quit(self) -> None:
+        """Quit the application, prompting if there are unsaved changes."""
+        editor = self.query_one(EditorPanel)
+        if editor.has_unsaved_changes():
+            unsaved = editor.get_unsaved_files()
+            self.push_screen(
+                UnsavedChangesScreen(unsaved),
+                callback=self._handle_quit_response,
+            )
+        else:
+            self.exit()
+
+    def _handle_quit_response(self, response: str) -> None:
+        """Handle the response from the unsaved changes dialog."""
+        if response == "save":
+            editor = self.query_one(EditorPanel)
+            # Save all unsaved files
+            for path in editor.get_unsaved_files():
+                editor._buffer_manager.save_file(path)
+            self.exit()
+        elif response == "discard":
+            self.exit()
+        # "cancel" -- do nothing, return to editor
 
     def _apply_panel_widths(self) -> None:
         """Apply current fr-based widths to all visible panels."""

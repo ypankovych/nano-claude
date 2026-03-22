@@ -17,6 +17,11 @@
     min-width: 20;
 }
 
+#code-editor {
+    width: 1fr;
+    height: 1fr;
+}
+
 .hidden {
     display: none;
 }
