@@ -45,13 +45,10 @@ class FilteredDirectoryTree(DirectoryTree):
         path_list.sort(key=lambda p: (not p.is_dir(), p.name.lower()))
         return path_list
 
-    def watch_show_hidden(self, value: bool) -> None:
+    async def watch_show_hidden(self, value: bool) -> None:
         """Reload tree when hidden file visibility changes."""
-        try:
-            self.reload()
-        except Exception:
-            # Widget not yet mounted -- reload will happen on mount
-            pass
+        if self.is_mounted:
+            await self.reload()
 
 
 class FileTreePanel(BasePanel):
@@ -61,14 +58,14 @@ class FileTreePanel(BasePanel):
         self.panel_title = "Files"
         yield FilteredDirectoryTree(Path.cwd(), id="directory-tree")
 
-    def on_mount(self) -> None:
-        """Expand the root node one level deep after the tree finishes loading.
+    def on_tree_node_expanded(self, event) -> None:
+        """Detect when the root node finishes its initial async load.
 
-        DirectoryTree loads its root directory asynchronously. We use set_timer
-        to defer the expand call until after the initial load completes.
+        DirectoryTree loads root contents asynchronously. We listen for the
+        first root expansion event to know the tree is ready for interaction.
         """
-        tree = self.query_one(FilteredDirectoryTree)
-        self.set_timer(0.1, tree.root.expand)
+        # Only care about root's first expansion (initial load)
+        pass
 
     def action_toggle_hidden(self) -> None:
         """Toggle visibility of hidden files in the directory tree."""
