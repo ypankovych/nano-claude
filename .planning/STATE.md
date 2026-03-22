@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-22T16:53:02.449Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-22T17:27:57.472Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Eliminate context switching between Claude Code and your editor -- see Claude's changes the moment they happen, and let Claude see what you're looking at.
-**Current focus:** Phase 01 — app-shell-and-layout
+**Current focus:** Phase 02 — file-tree-and-code-editor
 
 ## Current Position
 
-Phase: 01 (app-shell-and-layout) — EXECUTING
-Plan: 2 of 2
+Phase: 02 (file-tree-and-code-editor) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Plan: 2 of 2
 *Updated after each plan completion*
 | Phase 01-01 P01 | 5min | 2 tasks | 17 files |
 | Phase 01 P02 | 3min | 2 tasks | 4 files |
+| Phase 02 P01 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,9 @@ Recent decisions affecting current work:
 - [Phase 01-02]: Ctrl+b/e/r as primary focus bindings (Ctrl+number unreliable across terminals)
 - [Phase 01-02]: Tab/Shift+Tab for focus cycling (Ctrl+Tab intercepted by most terminal emulators)
 - [Phase 01-02]: 0.5fr resize step with 0.5fr minimum; all bindings have priority=True and id= for keymap overrides
+- [Phase 02-01]: frozenset for HIDDEN_PATTERNS -- immutable, O(1) membership testing
+- [Phase 02-01]: Ctrl+H for hidden file toggle, guard watch_show_hidden with try/except for unmounted context
+- [Phase 02-01]: filter_paths sorts directories-first then case-insensitive alphabetical
 
 ### Pending Todos
 
@@ -76,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T16:53:02.447Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-file-tree-and-code-editor/02-CONTEXT.md
+Last session: 2026-03-22T17:27:57.471Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

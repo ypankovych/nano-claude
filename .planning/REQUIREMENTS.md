@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### File Tree
 
-- [ ] **TREE-01**: User sees the project directory structure in a collapsible tree
-- [ ] **TREE-02**: User can navigate the file tree with keyboard (up/down, expand/collapse)
+- [x] **TREE-01**: User sees the project directory structure in a collapsible tree
+- [x] **TREE-02**: User can navigate the file tree with keyboard (up/down, expand/collapse)
 - [ ] **TREE-03**: User can open a file in the editor by selecting it in the tree
 - [ ] **TREE-04**: File tree auto-refreshes when files are added or removed
 
@@ -102,8 +102,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | EDIT-04 | Phase 2 | Pending |
 | EDIT-05 | Phase 2 | Pending |
 | EDIT-06 | Phase 2 | Pending |
-| TREE-01 | Phase 2 | Pending |
-| TREE-02 | Phase 2 | Pending |
+| TREE-01 | Phase 2 | Complete |
+| TREE-02 | Phase 2 | Complete |
 | TREE-03 | Phase 2 | Pending |
 | TREE-04 | Phase 2 | Pending |
 | CLAUDE-01 | Phase 3 | Pending |
