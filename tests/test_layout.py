@@ -88,7 +88,7 @@ async def test_editor_shows_readme_when_exists(tmp_path, monkeypatch):
     app = NanoClaudeApp()
     async with app.run_test(size=(120, 40)) as pilot:
         placeholder = app.query_one("#editor-placeholder")
-        assert "README.md" in placeholder.renderable
+        assert "README.md" in placeholder.content
 
 
 async def test_editor_shows_welcome_when_no_readme(tmp_path, monkeypatch):
@@ -97,7 +97,7 @@ async def test_editor_shows_welcome_when_no_readme(tmp_path, monkeypatch):
     app = NanoClaudeApp()
     async with app.run_test(size=(120, 40)) as pilot:
         placeholder = app.query_one("#editor-placeholder")
-        text = str(placeholder.renderable)
+        text = placeholder.content
         assert "Ctrl+b" in text
         assert "Ctrl+e" in text
         assert "Ctrl+r" in text

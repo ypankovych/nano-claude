@@ -1,0 +1,22 @@
+#main-panels {
+    height: 1fr;
+}
+
+#file-tree {
+    width: 1fr;
+    min-width: 15;
+}
+
+#editor {
+    width: 3.3fr;
+    min-width: 20;
+}
+
+#chat {
+    width: 2.3fr;
+    min-width: 20;
+}
+
+.hidden {
+    display: none;
+}
