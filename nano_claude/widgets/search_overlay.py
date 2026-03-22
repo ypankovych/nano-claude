@@ -35,7 +35,8 @@ class SearchOverlay(Horizontal):
     DEFAULT_CSS = """
     SearchOverlay {
         dock: top;
-        height: 3;
+        height: auto;
+        max-height: 3;
         display: none;
         background: $surface;
         border-bottom: solid $primary;
