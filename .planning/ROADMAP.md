@@ -30,11 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can move focus between panels using keyboard shortcuts, with the active panel visually indicated
   3. User can resize panels wider or narrower using keyboard shortcuts
   4. User can resize the terminal window and panels adapt without crashing or overlapping
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding, three-panel layout with header/footer, and responsive terminal resize handling
+- [ ] 01-02-PLAN.md — Keyboard focus switching, panel resizing, and file tree toggle
 
 ### Phase 2: File Tree and Code Editor
 **Goal**: User can browse project files in a tree and open, view, edit, and save them with syntax highlighting
@@ -117,7 +117,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. App Shell and Layout | 0/2 | Not started | - |
+| 1. App Shell and Layout | 0/2 | Planning complete | - |
 | 2. File Tree and Code Editor | 0/3 | Not started | - |
 | 3. Claude Code Integration | 0/3 | Not started | - |
 | 4. Change Detection and Auto-Jump | 0/2 | Not started | - |
