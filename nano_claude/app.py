@@ -117,6 +117,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+h", "toggle_hidden_files", "Hidden Files", id="tree.toggle_hidden", priority=True, show=True),
         # Save
         Binding("ctrl+s", "save_file", "Save", id="file.save", priority=True, show=True),
+        # Search in editor
+        Binding("ctrl+f", "toggle_search", "Find", id="editor.find", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
     ]
@@ -250,6 +252,14 @@ class NanoClaudeApp(App):
 
         editor = self.query_one(EditorPanel)
         editor.save_current_file()
+
+    def action_toggle_search(self) -> None:
+        """Toggle the search overlay in the editor panel (Ctrl+F)."""
+        try:
+            editor = self.query_one(EditorPanel)
+            editor.action_toggle_search()
+        except Exception:
+            pass
 
     def action_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
