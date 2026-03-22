@@ -15,6 +15,7 @@ from textual.message import Message
 from textual.widget import Widget
 
 from nano_claude.terminal.pty_manager import PtyManager, render_pyte_screen, translate_key
+from nano_claude.terminal.status_parser import StatusParser
 
 # Keys reserved for app-level bindings -- do NOT capture these.
 RESERVED_KEYS: frozenset[str] = frozenset({
@@ -76,6 +77,7 @@ class TerminalWidget(Widget, can_focus=True):
         self._screen: pyte.HistoryScreen | None = None
         self._stream: pyte.Stream | None = None
         self._pty_manager = PtyManager()
+        self._status_parser = StatusParser()
         self._running = False
 
     def on_mount(self) -> None:
@@ -120,10 +122,13 @@ class TerminalWidget(Widget, can_focus=True):
         self.app.call_from_thread(self._handle_pty_exit)
 
     def on_pty_data_received(self, message: PtyDataReceived) -> None:
-        """Feed received PTY data into the pyte terminal emulator."""
+        """Feed received PTY data into the pyte terminal emulator and status parser."""
         if self._stream is not None:
             self._stream.feed(message.data)
             self.refresh()
+        # Feed data to status parser and bubble any detected messages
+        for msg in self._status_parser.feed(message.data):
+            self.post_message(msg)
 
     def _handle_pty_exit(self) -> None:
         """Handle PTY subprocess exit."""
@@ -187,4 +192,5 @@ class TerminalWidget(Widget, can_focus=True):
     def restart_pty(self) -> None:
         """Restart the PTY subprocess."""
         self.stop_pty()
+        self._status_parser.reset()
         self.call_later(self._start_pty)

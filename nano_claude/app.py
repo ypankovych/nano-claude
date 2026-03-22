@@ -12,6 +12,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, DirectoryTree, Footer, Header, Label
 
 from nano_claude.config.settings import (
+    CLAUDE_STATUS_SEPARATOR,
     COLLAPSE_CHAT_THRESHOLD,
     COLLAPSE_TREE_THRESHOLD,
     DEFAULT_CHAT_WIDTH,
@@ -22,6 +23,7 @@ from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
 from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
+from nano_claude.terminal.status_parser import ClaudeState, CostUpdate, StatusUpdate
 
 
 class UnsavedChangesScreen(ModalScreen[str]):
@@ -106,8 +108,13 @@ class NanoClaudeApp(App):
     chat_width = reactive(DEFAULT_CHAT_WIDTH)
     tree_visible = reactive(True)
 
+    # Claude status display
+    claude_status = reactive("idle")
+    claude_cost = reactive("")
+
     # Optional path from CLI
     initial_path: str | None = None
+    _current_file_path: str = ""
 
     BINDINGS = [
         # Panel focus -- Ctrl+letter as primary (universally supported across terminals)
@@ -266,12 +273,53 @@ class NanoClaudeApp(App):
         """Open selected file in the editor panel."""
         editor = self.query_one(EditorPanel)
         editor.open_file(event.path)
-        # Show relative path in app sub_title
+        # Track file path separately for status bar combination
         try:
             rel = event.path.relative_to(Path.cwd())
-            self.sub_title = str(rel)
+            self._current_file_path = str(rel)
         except ValueError:
-            self.sub_title = event.path.name
+            self._current_file_path = event.path.name
+        self._update_status_bar()
+
+    def on_status_update(self, message: StatusUpdate) -> None:
+        """Update Claude status display from PTY output parsing."""
+        state_labels = {
+            ClaudeState.IDLE: "idle",
+            ClaudeState.THINKING: "thinking...",
+            ClaudeState.TOOL_USE: f"using {message.detail}",
+            ClaudeState.PERMISSION: "waiting for permission",
+            ClaudeState.DISCONNECTED: "disconnected",
+        }
+        self.claude_status = state_labels.get(message.state, "idle")
+        self._update_status_bar()
+
+    def on_cost_update(self, message: CostUpdate) -> None:
+        """Update Claude cost display from PTY output parsing."""
+        if message.total_tokens > 0:
+            if message.total_tokens >= 1000:
+                tokens_str = f"{message.total_tokens / 1000:.1f}k"
+            else:
+                tokens_str = str(message.total_tokens)
+            self.claude_cost = f"{tokens_str} tokens / ${message.total_cost_usd:.2f}"
+        self._update_status_bar()
+
+    def _update_status_bar(self) -> None:
+        """Combine file path and Claude status/cost into the header sub_title."""
+        parts = []
+        if self.claude_status and self.claude_status != "idle":
+            parts.append(f"Claude: {self.claude_status}")
+        if self.claude_cost:
+            parts.append(self.claude_cost)
+        status_text = CLAUDE_STATUS_SEPARATOR.join(parts)
+        # Combine file path with Claude status
+        if self._current_file_path and status_text:
+            self.sub_title = f"{self._current_file_path}  {status_text}"
+        elif self._current_file_path:
+            self.sub_title = self._current_file_path
+        elif status_text:
+            self.sub_title = status_text
+        else:
+            self.sub_title = ""
 
     def action_save_file(self) -> None:
         """Save the current file in the editor (Ctrl+S)."""

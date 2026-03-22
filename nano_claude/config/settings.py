@@ -101,3 +101,6 @@ Claude Code has exited (code: {exit_code}).
 Press Ctrl+Shift+R to restart Claude."""
 
 CLAUDE_RESTART_KEY = "ctrl+shift+r"
+
+# Claude status display
+CLAUDE_STATUS_SEPARATOR = " | "
