@@ -35,24 +35,22 @@ class SearchOverlay(Horizontal):
     DEFAULT_CSS = """
     SearchOverlay {
         dock: top;
-        height: 1;
+        height: auto;
         display: none;
         background: $surface;
+        align-vertical: middle;
     }
     SearchOverlay.visible {
         display: block;
     }
     SearchOverlay Input {
         width: 1fr;
-        height: 1;
-        border: none;
-        padding: 0;
-        background: $surface;
+        margin: 0;
     }
     SearchOverlay #search-count {
         width: auto;
         min-width: 6;
-        height: 1;
+        height: 3;
         content-align: right middle;
         padding: 0 1;
         color: $text-muted;
