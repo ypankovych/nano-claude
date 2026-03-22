@@ -12,11 +12,13 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Split-panel TUI with three-panel layout (file tree, editor, chat) — Phase 1
+- ✓ Panel resizing and layout management — Phase 1
+- ✓ Keyboard-driven panel navigation with focus indicators — Phase 1
+- ✓ Responsive terminal resize with panel collapse — Phase 1
 
 ### Active
 
-- [ ] Split-panel TUI with file tree, code editor, Claude Code chat, and toggleable terminal
 - [ ] Syntax-highlighted code editor with custom keybindings
 - [ ] Embedded Claude Code CLI running as a subprocess in the chat panel
 - [ ] File tree navigation on the left panel
@@ -25,7 +27,6 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - [ ] Code selection visible to Claude as ambient context
 - [ ] Explicit "send selection to Claude" action with prompt
 - [ ] Toggleable terminal panel via shortcut for running commands
-- [ ] Panel resizing and layout management
 
 ### Out of Scope
 
@@ -54,9 +55,11 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Embed Claude Code CLI rather than use API directly | Inherits all Claude Code features (tools, hooks, MCP) without reimplementing | — Pending |
-| Python for implementation | User preference, strong TUI library ecosystem (Textual, etc.) | — Pending |
-| Custom keybindings over nano/vim conventions | Controls should be designed around the unique editor+AI+terminal workflow | — Pending |
+| Python for implementation | User preference, strong TUI library ecosystem (Textual, etc.) | ✓ Good |
+| Custom keybindings over nano/vim conventions | Controls should be designed around the unique editor+AI+terminal workflow | ✓ Good |
 | Jump-and-highlight as default diff UX | Minimal disruption; full diff available via shortcut when needed | — Pending |
+| Ctrl+letter over Ctrl+number for panel shortcuts | Ctrl+number unreliable across terminals; Ctrl+b/e/r as primary, Ctrl+1/2/3 as secondary | ✓ Good |
+| Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-22 after initialization*
+*Last updated: 2026-03-22 after Phase 1 completion*
