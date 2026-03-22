@@ -125,15 +125,28 @@ class SearchableTextArea(TextArea):
         """Apply a Rich Style to a range of cells within a Strip.
 
         Crops the strip into three segments (before, match, after),
-        applies the style to the match segment, and rejoins.
+        replaces the style on each segment in the match range, and rejoins.
+        Uses style combination with higher priority for our highlight style
+        so it overrides the existing bgcolor from the theme.
         """
+        from rich.segment import Segment
+
         total_width = strip.cell_length
         if start >= end or start >= total_width:
             return strip
 
         # Split into: [0..start], [start..end], [end..total]
         before = strip.crop(0, start)
-        match_segment = strip.crop(start, end).apply_style(style)
+        match_crop = strip.crop(start, end)
         after = strip.crop(end, total_width)
+
+        # Replace style on each segment in the match range —
+        # apply_style doesn't override existing bgcolor, so we
+        # must explicitly merge with our style taking priority.
+        new_segments = []
+        for seg in match_crop:
+            merged = seg.style + style if seg.style else style
+            new_segments.append(Segment(seg.text, merged))
+        match_segment = Strip(new_segments, match_crop.cell_length)
 
         return Strip.join([before, match_segment, after])
