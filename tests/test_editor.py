@@ -12,7 +12,6 @@ from nano_claude.models.file_buffer import (
 )
 from nano_claude.panels.editor import EditorPanel
 
-
 # ---------------------------------------------------------------------------
 # FileBuffer unit tests
 # ---------------------------------------------------------------------------

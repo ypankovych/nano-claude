@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-22T17:27:57.472Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-22T17:35:30.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 02 (file-tree-and-code-editor) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: 2 of 3
 | Phase 01-01 P01 | 5min | 2 tasks | 17 files |
 | Phase 01 P02 | 3min | 2 tasks | 4 files |
 | Phase 02 P01 | 5min | 2 tasks | 5 files |
+| Phase 02 P02 | 6min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,10 @@ Recent decisions affecting current work:
 - [Phase 02-01]: frozenset for HIDDEN_PATTERNS -- immutable, O(1) membership testing
 - [Phase 02-01]: Ctrl+H for hidden file toggle, guard watch_show_hidden with try/except for unmounted context
 - [Phase 02-01]: filter_paths sorts directories-first then case-insensitive alphabetical
+- [Phase 02-02]: BufferManager caches FileBuffers by Path -- switching files preserves unsaved edits
+- [Phase 02-02]: detect_indentation uses GCD of leading-space widths clamped to 2-8
+- [Phase 02-02]: UnsavedChangesScreen is ModalScreen[str] with Y/N/C and dismiss callback
+- [Phase 02-02]: TextArea tab_behavior='indent' consumes Tab -- Ctrl+letter for panel switching
 
 ### Pending Todos
 
@@ -80,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T17:27:57.471Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-22T17:35:30Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

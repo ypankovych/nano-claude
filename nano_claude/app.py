@@ -247,6 +247,7 @@ class NanoClaudeApp(App):
 
     def action_save_file(self) -> None:
         """Save the current file in the editor (Ctrl+S)."""
+
         editor = self.query_one(EditorPanel)
         editor.save_current_file()
 
