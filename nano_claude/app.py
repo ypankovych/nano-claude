@@ -383,13 +383,6 @@ class NanoClaudeApp(App):
 
     def action_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
-        # Stop file watcher before exiting
-        if hasattr(self, "_file_watcher"):
-            self._file_watcher.stop()
-
-        # Stop Claude PTY subprocess
-        self._stop_claude_pty()
-
         editor = self.query_one(EditorPanel)
         if editor.has_unsaved_changes():
             unsaved = editor.get_unsaved_files()
@@ -398,20 +391,27 @@ class NanoClaudeApp(App):
                 callback=self._handle_quit_response,
             )
         else:
-            self.exit()
+            self._force_exit()
 
     def _handle_quit_response(self, response: str) -> None:
         """Handle the response from the unsaved changes dialog."""
         if response == "save":
             editor = self.query_one(EditorPanel)
-            # Save all unsaved files
             for path in editor.get_unsaved_files():
                 editor._buffer_manager.save_file(path)
-            self._stop_claude_pty()
-            self.exit()
+            self._force_exit()
         elif response == "discard":
-            self._stop_claude_pty()
-            self.exit()
+            self._force_exit()
+
+    def _force_exit(self) -> None:
+        """Kill subprocesses and exit immediately."""
+        import os as _os
+
+        self._stop_claude_pty()
+        if hasattr(self, "_file_watcher"):
+            self._file_watcher.stop()
+        # os._exit bypasses Textual's slow shutdown (worker joins, screen cleanup)
+        _os._exit(0)
         # "cancel" -- do nothing, return to editor
 
     def _apply_panel_widths(self) -> None:
