@@ -51,7 +51,7 @@ async def test_resize_restores_file_tree():
         file_tree = app.query_one("#file-tree")
         assert file_tree.has_class("hidden"), "File tree should be hidden at width 55"
         # Resize back to wide terminal
-        app.simulate_resize(120, 40)
+        await pilot.resize_terminal(120, 40)
         await pilot.pause()
         await pilot.pause()
         assert not file_tree.has_class("hidden"), "File tree should be restored at width 120"
@@ -67,7 +67,7 @@ async def test_resize_restores_both_panels():
         assert file_tree.has_class("hidden")
         assert chat.has_class("hidden")
         # Resize back to wide terminal
-        app.simulate_resize(120, 40)
+        await pilot.resize_terminal(120, 40)
         await pilot.pause()
         await pilot.pause()
         assert not file_tree.has_class("hidden"), "File tree should be restored at width 120"
