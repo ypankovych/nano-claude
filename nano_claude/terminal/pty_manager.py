@@ -249,18 +249,26 @@ class PtyManager:
     def stop(self) -> None:
         """Stop the PTY subprocess.
 
-        Sends SIGTERM, waits for exit, escalates to SIGKILL if needed.
-        Always closes the master fd. Resets pid/fd to None.
+        Closes the master fd FIRST to unblock any read threads, then
+        sends SIGTERM to the child, waits briefly, escalates to SIGKILL.
         """
+        # Close fd FIRST to unblock the read thread (os.read raises OSError)
+        if self._fd is not None:
+            try:
+                os.close(self._fd)
+            except OSError:
+                pass
+            self._fd = None
+
         if self._pid is not None:
             try:
                 os.kill(self._pid, signal.SIGTERM)
             except (OSError, ProcessLookupError):
                 pass
 
-            # Poll for exit (up to 10 times, 0.1s each)
+            # Brief poll for exit (3 attempts, 50ms each = 150ms max)
             exited = False
-            for _ in range(10):
+            for _ in range(3):
                 try:
                     result_pid, _ = os.waitpid(self._pid, os.WNOHANG)
                     if result_pid != 0:
@@ -269,23 +277,16 @@ class PtyManager:
                 except ChildProcessError:
                     exited = True
                     break
-                time.sleep(0.1)
+                time.sleep(0.05)
 
             if not exited:
                 try:
                     os.kill(self._pid, signal.SIGKILL)
-                    os.waitpid(self._pid, 0)
+                    os.waitpid(self._pid, os.WNOHANG)
                 except (OSError, ChildProcessError):
                     pass
 
-        if self._fd is not None:
-            try:
-                os.close(self._fd)
-            except OSError:
-                pass
-
-        self._pid = None
-        self._fd = None
+            self._pid = None
 
     def resize(self, cols: int, rows: int) -> None:
         """Resize the PTY terminal window."""
