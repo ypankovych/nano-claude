@@ -81,3 +81,23 @@ EXTENSION_TO_LANGUAGE: dict[str, str] = {
 # Large file threshold -- warn user before opening files larger than this.
 # Per research Pitfall 3: tree-sitter can have quadratic scaling above ~2000 lines.
 MAX_FILE_SIZE_BYTES: int = 1_048_576  # 1 MB
+
+# ---------------------------------------------------------------------------
+# Claude Code integration
+# ---------------------------------------------------------------------------
+
+CLAUDE_NOT_FOUND_MESSAGE = """\
+Claude Code not found
+
+Install Claude Code CLI:
+  npm install -g @anthropic-ai/claude-code
+
+The editor and file tree still work without Claude.
+Visit https://docs.anthropic.com/en/docs/claude-code for details."""
+
+CLAUDE_EXITED_MESSAGE = """\
+Claude Code has exited (code: {exit_code}).
+
+Press Ctrl+Shift+R to restart Claude."""
+
+CLAUDE_RESTART_KEY = "ctrl+shift+r"

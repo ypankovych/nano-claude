@@ -25,3 +25,17 @@
 .hidden {
     display: none;
 }
+
+#claude-not-found, #claude-exited {
+    width: 1fr;
+    height: 1fr;
+    content-align: center middle;
+    text-align: center;
+    color: $text-muted;
+    padding: 2 4;
+}
+
+#claude-terminal {
+    width: 1fr;
+    height: 1fr;
+}

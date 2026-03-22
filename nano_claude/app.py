@@ -140,6 +140,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+f", "toggle_search", "Find", id="editor.find", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
+        # Restart Claude Code subprocess
+        Binding("ctrl+shift+r", "restart_claude", "Restart Claude", id="claude.restart", priority=True, show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -313,11 +315,32 @@ class NanoClaudeApp(App):
         except Exception:
             pass
 
+    def action_restart_claude(self) -> None:
+        """Restart the Claude Code subprocess."""
+        try:
+            chat = self.query_one(ChatPanel)
+            chat.action_restart_claude()
+        except Exception:
+            pass
+
+    def _stop_claude_pty(self) -> None:
+        """Stop the Claude PTY subprocess if running."""
+        try:
+            from nano_claude.terminal.widget import TerminalWidget
+
+            terminal = self.query_one("#claude-terminal", TerminalWidget)
+            terminal.stop_pty()
+        except Exception:
+            pass
+
     def action_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
         # Stop file watcher before exiting
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
+
+        # Stop Claude PTY subprocess
+        self._stop_claude_pty()
 
         editor = self.query_one(EditorPanel)
         if editor.has_unsaved_changes():
@@ -336,8 +359,10 @@ class NanoClaudeApp(App):
             # Save all unsaved files
             for path in editor.get_unsaved_files():
                 editor._buffer_manager.save_file(path)
+            self._stop_claude_pty()
             self.exit()
         elif response == "discard":
+            self._stop_claude_pty()
             self.exit()
         # "cancel" -- do nothing, return to editor
 
