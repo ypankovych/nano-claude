@@ -9,7 +9,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import DirectoryTree, Footer, Header, Label
+from textual.widgets import Button, DirectoryTree, Footer, Header, Label
 
 from nano_claude.config.settings import (
     COLLAPSE_CHAT_THRESHOLD,
@@ -47,12 +47,19 @@ class UnsavedChangesScreen(ModalScreen[str]):
         width: 100%;
         margin-bottom: 1;
     }
+    #unsaved-buttons {
+        height: auto;
+        width: 100%;
+        align-horizontal: center;
+    }
+    #unsaved-buttons Button {
+        margin: 0 1;
+    }
     """
 
     BINDINGS = [
         Binding("y", "save_quit", "Save & Quit", id="unsaved.save", priority=True),
         Binding("n", "discard_quit", "Discard & Quit", id="unsaved.discard", priority=True),
-        Binding("c", "cancel_quit", "Cancel", id="unsaved.cancel", priority=True),
         Binding("escape", "cancel_quit", "Cancel", id="unsaved.escape", priority=True),
     ]
 
@@ -64,7 +71,18 @@ class UnsavedChangesScreen(ModalScreen[str]):
         file_list = "\n".join(f"  - {p.name}" for p in self._unsaved_files)
         with Vertical(id="unsaved-dialog"):
             yield Label(f"Unsaved changes in:\n{file_list}")
-            yield Label("[Y]es save & quit  /  [N]o discard & quit  /  [C]ancel")
+            with Horizontal(id="unsaved-buttons"):
+                yield Button("Save & Quit [Y]", variant="success", id="btn-save")
+                yield Button("Discard [N]", variant="error", id="btn-discard")
+                yield Button("Cancel [Esc]", variant="default", id="btn-cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-save":
+            self.dismiss("save")
+        elif event.button.id == "btn-discard":
+            self.dismiss("discard")
+        elif event.button.id == "btn-cancel":
+            self.dismiss("cancel")
 
     def action_save_quit(self) -> None:
         self.dismiss("save")
