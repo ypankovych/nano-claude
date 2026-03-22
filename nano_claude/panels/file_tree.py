@@ -5,8 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
+from rich.style import Style as RichStyle
+from rich.text import Text
 from textual.reactive import reactive
 from textual.widgets import DirectoryTree
+from textual.widgets._tree import TreeNode
 
 from nano_claude.config.settings import HIDDEN_PATTERNS
 from nano_claude.panels.base import BasePanel
@@ -18,11 +21,14 @@ class FilteredDirectoryTree(DirectoryTree):
     Hidden patterns (defined in HIDDEN_PATTERNS) and dotfiles (names starting
     with '.') are excluded unless show_hidden is True.
 
-    Paths are sorted with directories first, then files, alphabetically
-    (case-insensitive) within each group.
+    Supports marking files as modified (unsaved changes) with a visual indicator.
     """
 
     show_hidden: reactive[bool] = reactive(False)
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._modified_paths: set[Path] = set()
 
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
         """Filter and sort directory entries.
@@ -44,6 +50,28 @@ class FilteredDirectoryTree(DirectoryTree):
         # Sort: directories first, then alphabetical (case-insensitive)
         path_list.sort(key=lambda p: (not p.is_dir(), p.name.lower()))
         return path_list
+
+    def set_modified_paths(self, paths: set[Path]) -> None:
+        """Update the set of files with unsaved changes and refresh display."""
+        if paths != self._modified_paths:
+            self._modified_paths = paths
+            self.refresh()
+
+    def render_label(
+        self, node: TreeNode, base_style: RichStyle, style: RichStyle
+    ) -> Text:
+        """Render label with a modified indicator for unsaved files."""
+        label = super().render_label(node, base_style, style)
+
+        # Check if this node's path is in the modified set
+        node_path = node.data.path if node.data and hasattr(node.data, "path") else None
+        if node_path is None and isinstance(node.data, Path):
+            node_path = node.data
+
+        if node_path and node_path.resolve() in self._modified_paths:
+            label.append(" ●", style=RichStyle(color="orange1", bold=True))
+
+        return label
 
     async def watch_show_hidden(self, value: bool) -> None:
         """Reload tree when hidden file visibility changes."""

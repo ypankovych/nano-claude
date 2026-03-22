@@ -20,7 +20,7 @@ from nano_claude.config.settings import (
 )
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
-from nano_claude.panels.file_tree import FileTreePanel
+from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
 from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
 
 
@@ -273,9 +273,23 @@ class NanoClaudeApp(App):
 
     def action_save_file(self) -> None:
         """Save the current file in the editor (Ctrl+S)."""
-
         editor = self.query_one(EditorPanel)
         editor.save_current_file()
+        self._sync_modified_paths()
+
+    def on_text_area_changed(self, event) -> None:
+        """Sync modified file indicators to the tree when editor content changes."""
+        self._sync_modified_paths()
+
+    def _sync_modified_paths(self) -> None:
+        """Update the file tree's modified path indicators from the editor's buffers."""
+        try:
+            editor = self.query_one(EditorPanel)
+            tree = self.query_one("#directory-tree", FilteredDirectoryTree)
+            modified = {p.resolve() for p in editor.get_unsaved_files()}
+            tree.set_modified_paths(modified)
+        except Exception:
+            pass
 
     def action_toggle_search(self) -> None:
         """Toggle the search overlay in the editor panel (Ctrl+F)."""
