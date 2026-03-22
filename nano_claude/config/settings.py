@@ -1,5 +1,7 @@
 """Layout defaults and configuration constants."""
 
+from __future__ import annotations
+
 # Layout defaults (fr units, approximating 15% / 50% / 35%)
 DEFAULT_TREE_WIDTH = 1.0  # 1.0 / 6.6 total = ~15%
 DEFAULT_EDITOR_WIDTH = 3.3  # 3.3 / 6.6 total = ~50%
@@ -28,3 +30,54 @@ Quick Start:
   Ctrl+q  Quit
 
 Open a project directory to get started."""
+
+# Hidden file/directory patterns -- filtered from DirectoryTree by default.
+# Dotfiles (names starting with ".") are also hidden independently.
+# Toggled via Ctrl+H.
+HIDDEN_PATTERNS: frozenset[str] = frozenset({
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".DS_Store",
+    ".idea",
+    ".vscode",
+    ".eggs",
+    "*.egg-info",
+})
+
+# Map file extensions to TextArea language names for syntax highlighting.
+EXTENSION_TO_LANGUAGE: dict[str, str] = {
+    ".py": "python",
+    ".pyi": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "javascript",
+    ".rs": "rust",
+    ".go": "go",
+    ".java": "java",
+    ".json": "json",
+    ".toml": "toml",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".html": "html",
+    ".htm": "html",
+    ".css": "css",
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".sql": "sql",
+    ".sh": "bash",
+    ".bash": "bash",
+    ".zsh": "bash",
+    ".xml": "xml",
+    ".svg": "xml",
+    ".regex": "regex",
+}
+
+# Large file threshold -- warn user before opening files larger than this.
+# Per research Pitfall 3: tree-sitter can have quadratic scaling above ~2000 lines.
+MAX_FILE_SIZE_BYTES: int = 1_048_576  # 1 MB
