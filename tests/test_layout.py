@@ -95,11 +95,12 @@ async def test_editor_has_code_editor_textarea():
             app.query_one("#editor-placeholder")
 
 
-async def test_editor_starts_with_empty_content():
-    """Editor starts with empty TextArea before any file is opened."""
+async def test_editor_starts_with_welcome_or_readme():
+    """Editor starts with welcome greeting or README content on launch."""
     from textual.widgets import TextArea
 
     app = NanoClaudeApp()
     async with app.run_test(size=(120, 40)) as pilot:
         text_area = app.query_one("#code-editor", TextArea)
-        assert text_area.text == ""
+        # Should show either README.md content or welcome greeting, not empty
+        assert text_area.text != ""

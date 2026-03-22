@@ -79,8 +79,18 @@ class EditorPanel(BasePanel):
         )
 
     def on_mount(self) -> None:
-        """Store reference to SearchableTextArea for quick access."""
+        """Store reference to SearchableTextArea and show README or welcome."""
+        from nano_claude.config.settings import WELCOME_GREETING
+
         self._text_area = self.query_one("#code-editor", SearchableTextArea)
+
+        # Auto-open README.md if it exists, otherwise show welcome greeting
+        readme_path = Path.cwd() / "README.md"
+        if readme_path.is_file():
+            self.open_file(readme_path)
+        else:
+            self._text_area.load_text(WELCOME_GREETING)
+            self.panel_title = "Welcome"
 
     def open_file(self, path: Path) -> None:
         """Open a file in the editor with syntax highlighting.
