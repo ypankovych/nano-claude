@@ -16,12 +16,15 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - ✓ Panel resizing and layout management — Phase 1
 - ✓ Keyboard-driven panel navigation with focus indicators — Phase 1
 - ✓ Responsive terminal resize with panel collapse — Phase 1
+- ✓ File tree navigation with hidden file filtering and auto-refresh — Phase 2
+- ✓ Syntax-highlighted code editor with buffer management — Phase 2
+- ✓ File editing with undo/redo, save, and unsaved change tracking — Phase 2
+- ✓ In-editor search with multi-match highlighting — Phase 2
+- ✓ Filesystem watcher for real-time tree updates — Phase 2
 
 ### Active
 
-- [ ] Syntax-highlighted code editor with custom keybindings
 - [ ] Embedded Claude Code CLI running as a subprocess in the chat panel
-- [ ] File tree navigation on the left panel
 - [ ] Auto-jump to edited file with changed lines highlighted when Claude makes edits
 - [ ] Shortcut to toggle full git-style diff view of Claude's changes
 - [ ] Code selection visible to Claude as ambient context
@@ -62,4 +65,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-22 after Phase 1 completion*
+*Last updated: 2026-03-22 after Phase 2 completion*
