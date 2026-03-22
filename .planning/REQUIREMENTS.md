@@ -32,9 +32,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Claude Integration
 
-- [ ] **CLAUDE-01**: User can type prompts in the Claude chat panel and receive streaming responses from the actual Claude Code CLI running as an embedded subprocess
-- [ ] **CLAUDE-02**: Claude Code subprocess inherits all features (tools, hooks, MCP servers, CLAUDE.md, permissions) — no reimplementation
-- [ ] **CLAUDE-03**: User sees Claude's responses rendered with markdown formatting and syntax-highlighted code blocks
+- [x] **CLAUDE-01**: User can type prompts in the Claude chat panel and receive streaming responses from the actual Claude Code CLI running as an embedded subprocess
+- [x] **CLAUDE-02**: Claude Code subprocess inherits all features (tools, hooks, MCP servers, CLAUDE.md, permissions) — no reimplementation
+- [x] **CLAUDE-03**: User sees Claude's responses rendered with markdown formatting and syntax-highlighted code blocks
 - [ ] **CLAUDE-04**: User sees a status indicator showing Claude's current state (idle, thinking, writing code, waiting for permission)
 - [ ] **CLAUDE-05**: User sees token usage and estimated cost for the current session in the status bar
 
@@ -106,9 +106,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | TREE-02 | Phase 2 | Complete |
 | TREE-03 | Phase 2 | Complete |
 | TREE-04 | Phase 2 | Complete |
-| CLAUDE-01 | Phase 3 | Pending |
-| CLAUDE-02 | Phase 3 | Pending |
-| CLAUDE-03 | Phase 3 | Pending |
+| CLAUDE-01 | Phase 3 | Complete |
+| CLAUDE-02 | Phase 3 | Complete |
+| CLAUDE-03 | Phase 3 | Complete |
 | CLAUDE-04 | Phase 3 | Pending |
 | CLAUDE-05 | Phase 3 | Pending |
 | CHNG-01 | Phase 4 | Pending |

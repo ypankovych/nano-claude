@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 3 context gathered
-last_updated: "2026-03-22T18:19:46.530Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-22T18:51:37Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Eliminate context switching between Claude Code and your editor -- see Claude's changes the moment they happen, and let Claude see what you're looking at.
-**Current focus:** Phase 02 — file-tree-and-code-editor (COMPLETE)
+**Current focus:** Phase 03 — claude-code-integration
 
 ## Current Position
 
-Phase: 02 (file-tree-and-code-editor) — COMPLETE
-Plan: 3 of 3 (all complete)
+Phase: 03 (claude-code-integration) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Plan: 3 of 3 (all complete)
 | Phase 02 P01 | 5min | 2 tasks | 5 files |
 | Phase 02 P02 | 6min | 2 tasks | 8 files |
 | Phase 02 P03 | 7min | 2 tasks | 10 files |
+| Phase 03 P01 | 5min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,11 @@ Recent decisions affecting current work:
 - [Phase 02-03]: App.py is sole owner of on_file_system_changed -- consistent with app-level coordination pattern
 - [Phase 02-03]: 800ms debounce on file watcher to batch rapid filesystem changes
 - [Phase 02-03]: find_all_matches extracted as module-level function for testability
+- [Phase 03-01]: Used stdlib pty.fork() instead of ptyprocess (avoids extra dependency)
+- [Phase 03-01]: pyte.HistoryScreen with history=10000 for scrollback
+- [Phase 03-01]: RESERVED_KEYS frozenset (17 keys) prevents PTY from capturing app-level bindings
+- [Phase 03-01]: PtyManager is Textual-independent for testability; TerminalWidget handles integration
+- [Phase 03-01]: Extracted _stop_claude_pty helper for DRY cleanup in quit paths
 
 ### Pending Todos
 
@@ -90,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:19:46.528Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-claude-code-integration/03-CONTEXT.md
+Last session: 2026-03-22T18:51:37Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: .planning/phases/03-claude-code-integration/03-01-SUMMARY.md
