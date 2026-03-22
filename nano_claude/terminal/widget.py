@@ -7,10 +7,11 @@ using pyte for terminal emulation and Rich for styled rendering.
 from __future__ import annotations
 
 import os
+import threading
 
 import pyte
 from rich.text import Text
-from textual import events, work
+from textual import events
 from textual.message import Message
 from textual.widget import Widget
 
@@ -101,31 +102,35 @@ class TerminalWidget(Widget, can_focus=True):
             # Command not found -- will be handled by ChatPanel
             self._running = False
 
-    @work(thread=True, exclusive=True)
     def _start_read_loop(self) -> None:
-        """Background thread: read PTY output and post messages."""
+        """Start a daemon thread to read PTY output.
+
+        Uses a raw daemon thread instead of @work(thread=True) so Textual
+        doesn't wait for it to join on exit — instant quit.
+        """
         fd = self._pty_manager.fd
         if fd is None:
             return
 
-        while self._running:
-            try:
-                data = os.read(fd, 65536)
-                if not data:
+        def _read_loop():
+            while self._running:
+                try:
+                    data = os.read(fd, 65536)
+                    if not data:
+                        break
+                    decoded = data.decode("utf-8", errors="replace")
+                    self.post_message(PtyDataReceived(decoded))
+                except OSError:
                     break
-                decoded = data.decode("utf-8", errors="replace")
-                self.post_message(PtyDataReceived(decoded))
-            except OSError:
-                break
 
-        # Only handle exit if we're not shutting down — avoids deadlock
-        # where call_from_thread blocks waiting for the main thread
-        # which is waiting for this worker to finish.
-        if self._running:
-            try:
-                self.app.call_from_thread(self._handle_pty_exit)
-            except Exception:
-                pass
+            if self._running:
+                try:
+                    self.app.call_from_thread(self._handle_pty_exit)
+                except Exception:
+                    pass
+
+        t = threading.Thread(target=_read_loop, daemon=True)
+        t.start()
 
     def on_pty_data_received(self, message: PtyDataReceived) -> None:
         """Feed received PTY data into the pyte terminal emulator and status parser."""
