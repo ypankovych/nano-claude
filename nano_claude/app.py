@@ -406,11 +406,24 @@ class NanoClaudeApp(App):
     def _force_exit(self) -> None:
         """Kill subprocesses and exit immediately."""
         import os as _os
+        import sys
 
         self._stop_claude_pty()
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
-        # os._exit bypasses Textual's slow shutdown (worker joins, screen cleanup)
+
+        # Restore terminal state before force-exiting.
+        # os._exit skips Textual's cleanup, leaving the terminal with
+        # mouse tracking and alternate screen buffer still active.
+        sys.stdout.write(
+            "\x1b[?1000l"  # Disable mouse click tracking
+            "\x1b[?1002l"  # Disable mouse drag tracking
+            "\x1b[?1003l"  # Disable mouse move tracking
+            "\x1b[?1006l"  # Disable SGR mouse mode
+            "\x1b[?1049l"  # Exit alternate screen buffer
+            "\x1b[?25h"    # Show cursor
+        )
+        sys.stdout.flush()
         _os._exit(0)
         # "cancel" -- do nothing, return to editor
 
