@@ -118,8 +118,14 @@ class TerminalWidget(Widget, can_focus=True):
             except OSError:
                 break
 
-        # PTY read loop ended -- handle exit on main thread
-        self.app.call_from_thread(self._handle_pty_exit)
+        # Only handle exit if we're not shutting down — avoids deadlock
+        # where call_from_thread blocks waiting for the main thread
+        # which is waiting for this worker to finish.
+        if self._running:
+            try:
+                self.app.call_from_thread(self._handle_pty_exit)
+            except Exception:
+                pass
 
     def on_pty_data_received(self, message: PtyDataReceived) -> None:
         """Feed received PTY data into the pyte terminal emulator and status parser."""
