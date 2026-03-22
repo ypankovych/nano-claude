@@ -391,7 +391,7 @@ class NanoClaudeApp(App):
                 callback=self._handle_quit_response,
             )
         else:
-            self._force_exit()
+            self._graceful_exit()
 
     def _handle_quit_response(self, response: str) -> None:
         """Handle the response from the unsaved changes dialog."""
@@ -399,32 +399,30 @@ class NanoClaudeApp(App):
             editor = self.query_one(EditorPanel)
             for path in editor.get_unsaved_files():
                 editor._buffer_manager.save_file(path)
-            self._force_exit()
+            self._graceful_exit()
         elif response == "discard":
-            self._force_exit()
+            self._graceful_exit()
 
-    def _force_exit(self) -> None:
-        """Kill subprocesses and exit immediately."""
-        import os as _os
-        import sys
+    def _graceful_exit(self) -> None:
+        """Shut down subprocesses with progress feedback, then exit."""
+        self.sub_title = "Shutting down..."
+        self.run_worker(self._shutdown_sequence(), exclusive=True, name="shutdown")
 
+    async def _shutdown_sequence(self) -> None:
+        """Async shutdown with status updates in the header."""
+        import asyncio
+
+        self.sub_title = "Stopping Claude Code..."
         self._stop_claude_pty()
+        await asyncio.sleep(0.05)
+
+        self.sub_title = "Stopping file watcher..."
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
+        await asyncio.sleep(0.05)
 
-        # Restore terminal state before force-exiting.
-        # os._exit skips Textual's cleanup, leaving the terminal with
-        # mouse tracking and alternate screen buffer still active.
-        sys.stdout.write(
-            "\x1b[?1000l"  # Disable mouse click tracking
-            "\x1b[?1002l"  # Disable mouse drag tracking
-            "\x1b[?1003l"  # Disable mouse move tracking
-            "\x1b[?1006l"  # Disable SGR mouse mode
-            "\x1b[?1049l"  # Exit alternate screen buffer
-            "\x1b[?25h"    # Show cursor
-        )
-        sys.stdout.flush()
-        _os._exit(0)
+        self.sub_title = "Exiting..."
+        self.exit()
         # "cancel" -- do nothing, return to editor
 
     def _apply_panel_widths(self) -> None:
