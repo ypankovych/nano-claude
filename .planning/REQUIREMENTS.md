@@ -21,14 +21,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EDIT-03**: User can undo and redo edits
 - [x] **EDIT-04**: User can save files with a keyboard shortcut
 - [x] **EDIT-05**: User sees line numbers in the editor
-- [ ] **EDIT-06**: User can search within the current file (find, find next)
+- [x] **EDIT-06**: User can search within the current file (find, find next)
 
 ### File Tree
 
 - [x] **TREE-01**: User sees the project directory structure in a collapsible tree
 - [x] **TREE-02**: User can navigate the file tree with keyboard (up/down, expand/collapse)
 - [x] **TREE-03**: User can open a file in the editor by selecting it in the tree
-- [ ] **TREE-04**: File tree auto-refreshes when files are added or removed
+- [x] **TREE-04**: File tree auto-refreshes when files are added or removed
 
 ### Claude Integration
 
@@ -101,11 +101,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | EDIT-03 | Phase 2 | Complete |
 | EDIT-04 | Phase 2 | Complete |
 | EDIT-05 | Phase 2 | Complete |
-| EDIT-06 | Phase 2 | Pending |
+| EDIT-06 | Phase 2 | Complete |
 | TREE-01 | Phase 2 | Complete |
 | TREE-02 | Phase 2 | Complete |
 | TREE-03 | Phase 2 | Complete |
-| TREE-04 | Phase 2 | Pending |
+| TREE-04 | Phase 2 | Complete |
 | CLAUDE-01 | Phase 3 | Pending |
 | CLAUDE-02 | Phase 3 | Pending |
 | CLAUDE-03 | Phase 3 | Pending |
