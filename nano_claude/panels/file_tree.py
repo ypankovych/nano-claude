@@ -62,9 +62,13 @@ class FileTreePanel(BasePanel):
         yield FilteredDirectoryTree(Path.cwd(), id="directory-tree")
 
     def on_mount(self) -> None:
-        """Expand the root node one level deep on startup."""
+        """Expand the root node one level deep after the tree finishes loading.
+
+        DirectoryTree loads its root directory asynchronously. We use set_timer
+        to defer the expand call until after the initial load completes.
+        """
         tree = self.query_one(FilteredDirectoryTree)
-        tree.root.expand()
+        self.set_timer(0.1, tree.root.expand)
 
     def action_toggle_hidden(self) -> None:
         """Toggle visibility of hidden files in the directory tree."""
