@@ -46,12 +46,12 @@ Plans:
   3. User can edit file content (insert, delete, select, move cursor), undo/redo changes, and save with a keyboard shortcut
   4. User can search within the open file (find text, jump to next match)
   5. When files are added or removed externally (e.g., by git or another tool), the file tree updates automatically
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Install dependencies, FilteredDirectoryTree with hidden file toggle, file tree keyboard navigation
+- [ ] 02-02-PLAN.md — TextArea code editor with file buffer management, file selection wiring, save, unsaved changes tracking
+- [ ] 02-03-PLAN.md — Search overlay (Ctrl+F find/navigate) and filesystem watcher for tree auto-refresh
 
 ### Phase 3: Claude Code Integration
 **Goal**: User can converse with Claude Code inside the TUI and see its responses streamed in real time with status feedback
@@ -118,7 +118,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. App Shell and Layout | 0/2 | Planning complete | - |
-| 2. File Tree and Code Editor | 0/3 | Not started | - |
+| 2. File Tree and Code Editor | 0/3 | Planning complete | - |
 | 3. Claude Code Integration | 0/3 | Not started | - |
 | 4. Change Detection and Auto-Jump | 0/2 | Not started | - |
 | 5. Code-to-Claude Interaction | 0/1 | Not started | - |
