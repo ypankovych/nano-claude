@@ -271,16 +271,15 @@ class TestPtyManager:
     @patch("nano_claude.terminal.pty_manager.os.close")
     @patch("nano_claude.terminal.pty_manager.pty.fork")
     @patch("nano_claude.terminal.pty_manager.fcntl.ioctl")
-    def test_stop_sends_sigterm_then_cleans_up(
+    def test_stop_sends_sigkill_and_cleans_up(
         self, mock_ioctl, mock_fork, mock_close, mock_kill, mock_waitpid
     ):
         mock_fork.return_value = (123, 7)
-        # waitpid returns the pid (process exited) on first call after SIGTERM
         mock_waitpid.return_value = (123, 0)
         mgr = PtyManager()
         mgr.spawn("claude", cols=80, rows=24)
         mgr.stop()
-        mock_kill.assert_any_call(123, signal.SIGTERM)
+        mock_kill.assert_any_call(123, signal.SIGKILL)
         mock_close.assert_called_with(7)
         assert mgr.pid is None
         assert mgr.fd is None

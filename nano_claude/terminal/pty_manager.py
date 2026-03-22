@@ -261,31 +261,16 @@ class PtyManager:
             self._fd = None
 
         if self._pid is not None:
+            # SIGKILL immediately — claude is a subprocess we own,
+            # no need to wait for graceful shutdown on quit.
             try:
-                os.kill(self._pid, signal.SIGTERM)
+                os.kill(self._pid, signal.SIGKILL)
             except (OSError, ProcessLookupError):
                 pass
-
-            # Brief poll for exit (3 attempts, 50ms each = 150ms max)
-            exited = False
-            for _ in range(3):
-                try:
-                    result_pid, _ = os.waitpid(self._pid, os.WNOHANG)
-                    if result_pid != 0:
-                        exited = True
-                        break
-                except ChildProcessError:
-                    exited = True
-                    break
-                time.sleep(0.05)
-
-            if not exited:
-                try:
-                    os.kill(self._pid, signal.SIGKILL)
-                    os.waitpid(self._pid, os.WNOHANG)
-                except (OSError, ChildProcessError):
-                    pass
-
+            try:
+                os.waitpid(self._pid, os.WNOHANG)
+            except (OSError, ChildProcessError):
+                pass
             self._pid = None
 
     def resize(self, cols: int, rows: int) -> None:
