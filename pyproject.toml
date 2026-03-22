@@ -8,6 +8,7 @@ dependencies = [
     "click>=8.1,<9",
     "watchfiles>=1.1.1",
     "tree-sitter-language-pack>=1.0.0",
+    "pyte>=0.8.2",
 ]
 
 [project.scripts]
