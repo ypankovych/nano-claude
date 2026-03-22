@@ -62,12 +62,11 @@ Plans:
   2. The embedded Claude Code subprocess inherits all user features (tools, hooks, MCP servers, CLAUDE.md, permissions) without any manual configuration
   3. User sees a status indicator reflecting Claude's current state (idle, thinking, writing code, waiting for permission)
   4. User sees token usage and estimated cost for the current session in the status bar
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — PTY terminal module (pyte + pty.fork), TerminalWidget, ChatPanel replacement with graceful degradation and restart
+- [ ] 03-02-PLAN.md — Status/cost parser from PTY output, status bar integration, end-to-end visual verification
 
 ### Phase 4: Change Detection and Auto-Jump
 **Goal**: When Claude edits files, the editor automatically navigates to the changes so the user never has to hunt for what changed
@@ -119,7 +118,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. App Shell and Layout | 0/2 | Planning complete | - |
 | 2. File Tree and Code Editor | 0/3 | Planning complete | - |
-| 3. Claude Code Integration | 0/3 | Not started | - |
+| 3. Claude Code Integration | 0/2 | Planning complete | - |
 | 4. Change Detection and Auto-Jump | 0/2 | Not started | - |
 | 5. Code-to-Claude Interaction | 0/1 | Not started | - |
 | 6. Terminal Panel | 0/2 | Not started | - |
