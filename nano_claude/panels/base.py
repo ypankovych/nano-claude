@@ -16,9 +16,13 @@ class BasePanel(Vertical):
     DEFAULT_CSS = """
     BasePanel {
         border: round $secondary;
+        border-title-color: $text-muted;
+        border-title-style: none;
     }
     BasePanel:focus-within {
         border: round $accent;
+        border-title-color: $accent;
+        border-title-style: bold;
     }
     """
 

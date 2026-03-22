@@ -34,6 +34,24 @@ class NanoClaudeApp(App):
     initial_path: str | None = None
 
     BINDINGS = [
+        # Panel focus -- Ctrl+letter as primary (universally supported across terminals)
+        # Per research Pitfall 1: Ctrl+number is unreliable in many terminals (iTerm2, tmux, screen)
+        # Substitution: Ctrl+1/2/3 (from CONTEXT.md) -> Ctrl+b/e/r (primary)
+        Binding("ctrl+b", "focus_panel('file-tree')", "Tree", id="focus.tree", priority=True, show=False),
+        Binding("ctrl+e", "focus_panel('editor')", "Editor", id="focus.editor", priority=True, show=False),
+        Binding("ctrl+r", "focus_panel('chat')", "Chat", id="focus.chat", priority=True, show=False),
+        # Secondary bindings: Ctrl+1/2/3 for terminals that support them (per CONTEXT.md original spec)
+        Binding("ctrl+1", "focus_panel('file-tree')", "Tree", id="focus.tree.alt", priority=True, show=False),
+        Binding("ctrl+2", "focus_panel('editor')", "Editor", id="focus.editor.alt", priority=True, show=False),
+        Binding("ctrl+3", "focus_panel('chat')", "Chat", id="focus.chat.alt", priority=True, show=False),
+        # Focus cycling -- Tab as primary (universally supported)
+        # Per research Pitfall 5: Ctrl+Tab is intercepted by most terminal emulators
+        # Substitution: Ctrl+Tab (from CONTEXT.md) -> Tab (primary)
+        Binding("tab", "focus_next", "Next Panel", id="focus.next", priority=True, show=False),
+        Binding("shift+tab", "focus_previous", "Prev Panel", id="focus.prev", priority=True, show=False),
+        # Secondary binding: Ctrl+Tab for terminals that pass it through
+        Binding("ctrl+tab", "focus_next", "Next Panel", id="focus.next.alt", priority=True, show=False),
+        # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
     ]
 
@@ -48,6 +66,23 @@ class NanoClaudeApp(App):
     def on_mount(self) -> None:
         """Initialize responsive collapse based on starting terminal size."""
         self._handle_responsive_collapse(self.size.width)
+
+    def action_focus_panel(self, panel_id: str) -> None:
+        """Focus a specific panel by its DOM id. Does nothing if panel is hidden."""
+        try:
+            panel = self.query_one(f"#{panel_id}")
+            if panel.has_class("hidden"):
+                return
+            # Find the first focusable child within the panel
+            for widget in panel.query("*"):
+                if widget.can_focus:
+                    widget.focus()
+                    return
+            # Fallback: focus the panel itself if it can accept focus
+            if panel.can_focus:
+                panel.focus()
+        except Exception:
+            pass
 
     def on_resize(self, event) -> None:
         """Handle terminal resize -- collapse panels at small sizes."""
