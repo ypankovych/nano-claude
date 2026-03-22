@@ -256,7 +256,7 @@ class EditorPanel(BasePanel):
         name = self.current_file.name
         buf = self._buffer_manager.open_file(self.current_file)
         if buf.is_modified:
-            self.panel_title = f"{name} [bold $error].[/]"
+            self.panel_title = f"[italic orange1]{name}[/] [bold red]●[/]"
         else:
             self.panel_title = name
 
