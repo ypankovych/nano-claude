@@ -70,3 +70,46 @@ class FileTreePanel(BasePanel):
         """Toggle visibility of hidden files in the directory tree."""
         tree = self.query_one(FilteredDirectoryTree)
         tree.show_hidden = not tree.show_hidden
+
+    async def reload_preserving_state(self) -> None:
+        """Reload the directory tree while preserving expanded directories.
+
+        Captures which directories are currently expanded, reloads the tree,
+        then re-expands those directories. This ensures external changes
+        (file add/remove) are reflected without collapsing user's view.
+        """
+        tree = self.query_one(FilteredDirectoryTree)
+
+        # Capture expanded paths by walking tree nodes
+        expanded_paths: set[Path] = set()
+
+        def _collect_expanded(node) -> None:
+            """Recursively collect paths of expanded tree nodes."""
+            if node.is_expanded and node.data and hasattr(node.data, "path"):
+                expanded_paths.add(node.data.path)
+            elif node.is_expanded and hasattr(node, "data") and isinstance(node.data, Path):
+                expanded_paths.add(node.data)
+            for child in node.children:
+                _collect_expanded(child)
+
+        _collect_expanded(tree.root)
+
+        # Reload the tree from disk
+        await tree.reload()
+
+        # Re-expand previously expanded directories
+        def _restore_expanded(node) -> None:
+            """Recursively re-expand nodes whose paths were previously expanded."""
+            node_path = None
+            if node.data and hasattr(node.data, "path"):
+                node_path = node.data.path
+            elif hasattr(node, "data") and isinstance(node.data, Path):
+                node_path = node.data
+
+            if node_path and node_path in expanded_paths:
+                node.expand()
+
+            for child in node.children:
+                _restore_expanded(child)
+
+        _restore_expanded(tree.root)

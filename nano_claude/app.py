@@ -21,6 +21,7 @@ from nano_claude.config.settings import (
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel
+from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
 
 
 class UnsavedChangesScreen(ModalScreen[str]):
@@ -132,8 +133,13 @@ class NanoClaudeApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Initialize responsive collapse based on starting terminal size."""
+        """Initialize responsive collapse and start file watcher."""
         self._handle_responsive_collapse(self.size.width)
+        # Start filesystem watcher for auto-refresh of file tree
+        self._file_watcher = FileWatcherService(self, Path.cwd())
+        self.run_worker(
+            self._file_watcher.start(), exclusive=True, name="file-watcher"
+        )
 
     def action_focus_panel(self, panel_id: str) -> None:
         """Focus a specific panel by its DOM id. Does nothing if panel is hidden."""
@@ -261,8 +267,26 @@ class NanoClaudeApp(App):
         except Exception:
             pass
 
+    def on_file_system_changed(self, event: FileSystemChanged) -> None:
+        """Handle filesystem changes -- refresh the file tree.
+
+        This is the SOLE handler for FileSystemChanged. App.py owns
+        inter-panel coordination (FileTreePanel does NOT handle this).
+        """
+        try:
+            file_tree = self.query_one(FileTreePanel)
+            self.run_worker(
+                file_tree.reload_preserving_state(), name="tree-reload"
+            )
+        except Exception:
+            pass
+
     def action_quit(self) -> None:
         """Quit the application, prompting if there are unsaved changes."""
+        # Stop file watcher before exiting
+        if hasattr(self, "_file_watcher"):
+            self._file_watcher.stop()
+
         editor = self.query_one(EditorPanel)
         if editor.has_unsaved_changes():
             unsaved = editor.get_unsaved_files()
