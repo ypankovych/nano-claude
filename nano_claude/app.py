@@ -404,24 +404,20 @@ class NanoClaudeApp(App):
             self._graceful_exit()
 
     def _graceful_exit(self) -> None:
-        """Shut down subprocesses with progress feedback, then exit."""
-        self.sub_title = "Shutting down..."
-        self.run_worker(self._shutdown_sequence(), exclusive=True, name="shutdown")
+        """Shut down subprocesses and exit cleanly."""
+        self.notify("Shutting down...", severity="information")
 
-    async def _shutdown_sequence(self) -> None:
-        """Async shutdown with status updates in the header."""
-        import asyncio
-
-        self.sub_title = "Stopping Claude Code..."
+        # Kill Claude PTY
         self._stop_claude_pty()
-        await asyncio.sleep(0.05)
 
-        self.sub_title = "Stopping file watcher..."
+        # Stop file watcher
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
-        await asyncio.sleep(0.05)
 
-        self.sub_title = "Exiting..."
+        # Cancel all workers so self.exit() doesn't wait for them
+        for worker in self.workers:
+            worker.cancel()
+
         self.exit()
         # "cancel" -- do nothing, return to editor
 
