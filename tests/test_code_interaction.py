@@ -247,3 +247,186 @@ class TestGetPinnedContextText:
         assert "```python" in result
         assert "src/utils.py lines 5-15" in result
         assert "def helper():" in result
+
+
+class TestAmbientContextInjection:
+    """Tests for Enter key interception with ambient context injection."""
+
+    def test_enter_with_pinned_context_and_idle_injects(self) -> None:
+        """Enter key with pinned context and IDLE state injects context before Enter."""
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.IDLE
+        widget._get_pinned_context = MagicMock(
+            return_value="```py\n# f.py lines 1-5\ncode\n```\n"
+        )
+
+        written_data = bytearray()
+
+        def fake_write(fd, data):
+            written_data.extend(data)
+            return len(data)
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch("nano_claude.terminal.widget.os.write", side_effect=fake_write):
+            with patch(
+                "nano_claude.terminal.widget.write_to_pty_bracketed"
+            ) as mock_bracketed:
+                with patch(
+                    "nano_claude.terminal.widget.translate_key", return_value="\r"
+                ):
+                    widget.on_key(event)
+                mock_bracketed.assert_called_once_with(
+                    42, "```py\n# f.py lines 1-5\ncode\n```\n"
+                )
+
+    def test_enter_without_pinned_context_no_injection(self) -> None:
+        """Enter key without pinned context should not inject anything."""
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._get_pinned_context = None
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch(
+            "nano_claude.terminal.widget.write_to_pty_bracketed"
+        ) as mock_bracketed:
+            with patch(
+                "nano_claude.terminal.widget.translate_key", return_value="\r"
+            ):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
+
+    def test_enter_with_context_but_not_idle_no_injection(self) -> None:
+        """Enter key when Claude is not IDLE should not inject context."""
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.THINKING
+        widget._get_pinned_context = MagicMock(
+            return_value="```py\ncode\n```\n"
+        )
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch(
+            "nano_claude.terminal.widget.write_to_pty_bracketed"
+        ) as mock_bracketed:
+            with patch(
+                "nano_claude.terminal.widget.translate_key", return_value="\r"
+            ):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
+
+
+class TestContextInjectionGuard:
+    """Tests for state guard preventing injection in non-IDLE states."""
+
+    def test_idle_state_allows_injection(self) -> None:
+        """ClaudeState.IDLE allows context injection."""
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.IDLE
+        widget._get_pinned_context = MagicMock(return_value="context")
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch(
+            "nano_claude.terminal.widget.write_to_pty_bracketed"
+        ) as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_called_once()
+
+    def test_thinking_state_blocks_injection(self) -> None:
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.THINKING
+        widget._get_pinned_context = MagicMock(return_value="context")
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
+
+    def test_tool_use_state_blocks_injection(self) -> None:
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.TOOL_USE
+        widget._get_pinned_context = MagicMock(return_value="context")
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
+
+    def test_permission_state_blocks_injection(self) -> None:
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.PERMISSION
+        widget._get_pinned_context = MagicMock(return_value="context")
+
+        event = MagicMock()
+        event.key = "enter"
+
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
