@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-23T12:20:25.899Z"
+stopped_at: "Completed 04-01-PLAN.md"
+last_updated: "2026-03-23T12:48:06Z"
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Eliminate context switching between Claude Code and your editor -- see Claude's changes the moment they happen, and let Claude see what you're looking at.
-**Current focus:** Phase 03 — claude-code-integration
+**Current focus:** Phase 04 — change-detection-and-auto-jump
 
 ## Current Position
 
-Phase: 03 (claude-code-integration) — EXECUTING
+Phase: 04 (change-detection-and-auto-jump) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -52,6 +52,7 @@ Plan: 2 of 2
 | Phase 02 P02 | 6min | 2 tasks | 8 files |
 | Phase 02 P03 | 7min | 2 tasks | 10 files |
 | Phase 03 P01 | 5min | 2 tasks | 11 files |
+| Phase 04 P01 | 8min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,11 @@ Recent decisions affecting current work:
 - [Phase 03-01]: RESERVED_KEYS frozenset (17 keys) prevents PTY from capturing app-level bindings
 - [Phase 03-01]: PtyManager is Textual-independent for testability; TerminalWidget handles integration
 - [Phase 03-01]: Extracted _stop_claude_pty helper for DRY cleanup in quit paths
+- [Phase 04-01]: TextArea.render_line (grandparent) base strip, layer change tints UNDER search highlights
+- [Phase 04-01]: dark_green (added) and dark_goldenrod (modified) for subtle change highlight tinting
+- [Phase 04-01]: Ctrl+J for jump-to-change (avoids Ctrl+G conflict with go-to-line)
+- [Phase 04-01]: Change highlights auto-clear on user edit to avoid stale markers
+- [Phase 04-01]: ExternalChangeConflictScreen follows UnsavedChangesScreen inline CSS pattern
 
 ### Pending Todos
 
@@ -96,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:20:25.897Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-change-detection-and-auto-jump/04-CONTEXT.md
+Last session: 2026-03-23T12:48:06Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: .planning/phases/04-change-detection-and-auto-jump/04-02-PLAN.md
