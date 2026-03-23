@@ -35,7 +35,7 @@ class ChatPanel(BasePanel):
                 "Starting Claude Code...",
                 id="claude-loading",
             )
-            yield TerminalWidget(command="claude", id="claude-terminal")
+            yield TerminalWidget(command=["claude", "--dangerously-skip-permissions"], id="claude-terminal")
 
     def on_pty_data_received(self, message) -> None:
         """Remove loading message once Claude starts producing output."""
@@ -76,4 +76,4 @@ class ChatPanel(BasePanel):
             terminal.restart_pty()
         except Exception:
             # No terminal widget -- mount a new one
-            self.mount(TerminalWidget(command="claude", id="claude-terminal"))
+            self.mount(TerminalWidget(command=["claude", "--dangerously-skip-permissions"], id="claude-terminal"))

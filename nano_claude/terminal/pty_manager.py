@@ -236,15 +236,23 @@ class PtyManager:
         except ChildProcessError:
             return False
 
-    def spawn(self, command: str, cols: int, rows: int) -> tuple[int, int]:
+    def spawn(self, command: str | list[str], cols: int, rows: int) -> tuple[int, int]:
         """Spawn a PTY subprocess running the given command.
 
+        Command can be a string ("claude") or a list (["claude", "--flag"]).
         Child process sets environment (TERM, COLORTERM, COLUMNS, LINES)
         and then exec's the command. Parent stores pid/fd and configures
         the terminal window size.
 
         Returns (pid, fd) tuple.
         """
+        if isinstance(command, str):
+            argv = [command]
+            exe = command
+        else:
+            argv = list(command)
+            exe = argv[0]
+
         child_pid, master_fd = pty.fork()
 
         if child_pid == 0:
@@ -254,7 +262,7 @@ class PtyManager:
             env["COLORTERM"] = "truecolor"
             env["COLUMNS"] = str(cols)
             env["LINES"] = str(rows)
-            os.execvpe(command, [command], env)
+            os.execvpe(exe, argv, env)
             # execvpe does not return
         else:
             # Parent process

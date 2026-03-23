@@ -263,7 +263,9 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.IDLE
+        widget._scroll_lines = 0
         widget._input_buffer = "fix this bug"
+        widget._scroll_lines = 0
         widget._get_pinned_context = MagicMock(
             return_value="```py\n# f.py lines 1-5\ncode\n```\n"
         )
@@ -303,6 +305,7 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._get_pinned_context = None
+        widget._scroll_lines = 0
         widget._input_buffer = "hello"
 
         event = MagicMock()
@@ -328,6 +331,7 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.IDLE
+        widget._scroll_lines = 0
         widget._input_buffer = ""
         widget._get_pinned_context = MagicMock(return_value="context")
 
@@ -352,6 +356,7 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.THINKING
+        widget._scroll_lines = 0
         widget._input_buffer = "hello"
         widget._get_pinned_context = MagicMock(return_value="context")
 
@@ -375,6 +380,7 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._get_pinned_context = None
+        widget._scroll_lines = 0
         widget._input_buffer = ""
 
         with patch("nano_claude.terminal.widget.translate_key", return_value="x"):
@@ -415,6 +421,7 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.IDLE
+        widget._scroll_lines = 0
         widget._input_buffer = "test prompt"
         widget._get_pinned_context = MagicMock(return_value="context")
 
@@ -437,6 +444,7 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.THINKING
+        widget._scroll_lines = 0
         widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 
@@ -460,6 +468,7 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.TOOL_USE
+        widget._scroll_lines = 0
         widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 
@@ -483,6 +492,7 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.PERMISSION
+        widget._scroll_lines = 0
         widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 

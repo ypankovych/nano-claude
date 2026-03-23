@@ -19,14 +19,29 @@ COLLAPSE_CHAT_THRESHOLD = 40  # Hide chat below this, editor only
 WELCOME_GREETING = """\
 Welcome to nano-claude!
 
-Quick Start:
-  Ctrl+b  Focus file tree
-  Ctrl+e  Focus editor
-  Ctrl+r  Focus chat
-  Tab     Cycle panels
-  Ctrl+=  Grow panel
-  Ctrl+-  Shrink panel
-  Ctrl+\\  Toggle file tree
+Navigation:
+  Ctrl+b  Focus file tree       Ctrl+e  Focus editor
+  Ctrl+r  Focus chat            Tab     Cycle panels
+  Ctrl+=  Grow panel            Ctrl+-  Shrink panel
+  Ctrl+\\  Toggle file tree      Ctrl+h  Toggle hidden files
+
+Editing:
+  Ctrl+s  Save file             Ctrl+f  Find in file
+  Ctrl+c  Copy (with selection) / Cancel (in terminal)
+
+Claude:
+  Ctrl+l  Send selection to Claude
+  Ctrl+p  Pin/unpin context     Ctrl+Shift+r  Restart Claude
+
+Changes:
+  Ctrl+j  Jump to change        Ctrl+d  Toggle diff view
+
+Terminal:
+  Ctrl+t  Toggle terminal panel
+  Ctrl+n  New tab               Ctrl+w  Close tab
+  Ctrl+Shift+Left/Right  Switch tabs
+  Scroll  Mouse wheel to scroll history
+
   Ctrl+q  Quit
 
 Open a project directory to get started."""

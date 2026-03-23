@@ -111,7 +111,7 @@ class TerminalWidget(Widget, can_focus=True):
     }
     """
 
-    def __init__(self, command: str = "claude", **kwargs) -> None:
+    def __init__(self, command: str | list[str] = "claude", **kwargs) -> None:
         super().__init__(**kwargs)
         self._command = command
         self._screen: pyte.HistoryScreen | None = None
@@ -245,6 +245,19 @@ class TerminalWidget(Widget, can_focus=True):
         if self._scroll_lines > 0:
             self._scroll_lines = 0
             self.refresh()
+
+        # Ctrl+C: copy selected text if any, otherwise send SIGINT to PTY
+        if event.key == "ctrl+c":
+            try:
+                selected = self.screen.get_selected_text()
+                if selected:
+                    self.app.copy_to_clipboard(selected)
+                    self.screen.clear_selection()
+                    event.stop()
+                    return
+            except Exception:
+                pass
+            # No selection — fall through to send SIGINT to PTY
 
         # Ctrl+W: request tab close (bubbles to TerminalPanel)
         if event.key == "ctrl+w":
