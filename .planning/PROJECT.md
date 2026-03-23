@@ -68,4 +68,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-23 after Phase 4 completion*
+*Last updated: 2026-03-23 after Phase 4 completion (with bug fixes)*
