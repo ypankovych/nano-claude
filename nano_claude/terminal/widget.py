@@ -17,14 +17,14 @@ from textual.message import Message
 from textual.widget import Widget
 
 # Escape sequences that pyte doesn't handle — strip before feeding to pyte stream.
-# These include kitty keyboard protocol, bracketed paste mode extensions, and
-# cursor save/restore sequences that leave trailing characters in the buffer.
+# Claude Code uses kitty keyboard protocol (\x1b[>1u, \x1b[<u), xterm queries
+# (\x1b[>0q), cursor style (\x1b[N q), and device attributes (\x1b[c).
+# If pyte doesn't recognize these, trailing chars like 'u' or 'q' appear in the buffer.
 _UNSUPPORTED_ESC_RE = re.compile(
-    r"\x1b\[[\?=]?"               # CSI with optional ? or =
-    r"[0-9;]*"                    # numeric params
-    r"[u]"                        # the trailing 'u' (kitty keyboard / cursor restore)
-    r"|\x1b\[>[0-9;]*[a-z]"      # CSI > sequences (xterm version queries)
-    r"|\x1b\[[0-9;]*[ ][a-z]"    # CSI Sp sequences (e.g., cursor style)
+    r"\x1b\[[<>?=]?[0-9;]*u"     # kitty keyboard: \x1b[>1u, \x1b[<u, \x1b[?u
+    r"|\x1b\[>[0-9;]*[a-zA-Z]"   # CSI > sequences: \x1b[>0q (xterm version)
+    r"|\x1b\[[0-9;]* [a-zA-Z]"   # CSI Sp sequences: \x1b[1 q (cursor style)
+    r"|\x1b\[c"                   # Device attributes query
 )
 
 from nano_claude.terminal.pty_manager import PtyManager, render_pyte_screen, translate_key
@@ -208,7 +208,7 @@ class TerminalWidget(Widget, can_focus=True):
         if self._screen is None:
             return Text("Starting Claude Code...")
 
-        lines = render_pyte_screen(self._screen)
+        lines = render_pyte_screen(self._screen, cursor_visible=False)
         result = Text()
         for i, line in enumerate(lines):
             if i > 0:
