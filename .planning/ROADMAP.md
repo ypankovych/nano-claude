@@ -76,11 +76,11 @@ Plans:
   1. When Claude edits a file (via Write, Edit, or Bash tools), the editor automatically opens that file and scrolls to the changed lines with visual highlighting
   2. User can toggle a git-style diff view showing green additions and red deletions of Claude's changes via a keyboard shortcut
   3. When files change externally (git checkout, other tools), open files auto-reload with updated content
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — ChangeTracker service, change highlights, notifications, Ctrl+J jump, auto-reload with conflict prompt
+- [ ] 04-02-PLAN.md — DiffView widget with Ctrl+D toggle for unified inline diff view
 
 ### Phase 5: Code-to-Claude Interaction
 **Goal**: User can direct Claude's attention to specific code selections and Claude sees what the user is looking at
@@ -119,6 +119,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. App Shell and Layout | 0/2 | Planning complete | - |
 | 2. File Tree and Code Editor | 0/3 | Planning complete | - |
 | 3. Claude Code Integration | 0/2 | Planning complete | - |
-| 4. Change Detection and Auto-Jump | 0/2 | Not started | - |
+| 4. Change Detection and Auto-Jump | 0/2 | Planning complete | - |
 | 5. Code-to-Claude Interaction | 0/1 | Not started | - |
 | 6. Terminal Panel | 0/2 | Not started | - |
