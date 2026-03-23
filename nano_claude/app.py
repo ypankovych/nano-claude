@@ -65,7 +65,18 @@ class ShutdownScreen(ModalScreen):
 
         # Schedule a hard kill if Textual's exit takes too long
         def _force_kill():
-            sys.stdout.write("\x1b[?1049l\x1b[?25h")
+            sys.stdout.write(
+                "\x1b[?1049l"    # Exit alternate screen buffer
+                "\x1b[?25h"      # Show cursor
+                "\x1b[?1000l"    # Disable mouse click tracking
+                "\x1b[?1002l"    # Disable mouse drag tracking
+                "\x1b[?1003l"    # Disable mouse move tracking
+                "\x1b[?1006l"    # Disable SGR mouse mode
+                "\x1b[?1004l"    # Disable focus reporting
+                "\x1b[?2004l"    # Disable bracketed paste
+                "\x1b[0m"        # Reset all attributes
+                "\x1bc"          # Full terminal reset (RIS)
+            )
             sys.stdout.flush()
             _os._exit(0)
 
