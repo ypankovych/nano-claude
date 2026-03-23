@@ -156,7 +156,8 @@ class EditorPanel(BasePanel):
         language = detect_language(path)
         _indent_type, indent_width = detect_indentation(buf.current_content)
 
-        # Update TextArea
+        # Update TextArea — suppress on_text_area_changed during load
+        self._reload_count += 1
         self._text_area.load_text(buf.current_content)
         self._text_area.language = language
         self._text_area.indent_width = indent_width
