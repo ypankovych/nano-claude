@@ -107,8 +107,11 @@ class EditorPanel(BasePanel):
     def open_file(self, path: Path) -> None:
         """Open a file in the editor with syntax highlighting.
 
-        Checks for binary and oversized files. Saves current buffer state
-        before switching. Loads content, sets language, and detects indentation.
+        Resolves the path to absolute form for consistent comparison with
+        filesystem watcher paths. Checks for binary and oversized files.
+        Saves current buffer state before switching.
+        """
+        path = path.resolve()
         """
         # Exit diff mode if active
         if self._diff_mode:
@@ -209,12 +212,14 @@ class EditorPanel(BasePanel):
         Stores highlights so they can be restored when switching files.
         If the file is currently displayed, applies highlights immediately.
         """
+        path = path.resolve()
         self._file_change_highlights[path] = (added, modified)
         if path == self.current_file:
             self._text_area.set_change_highlights(added, modified)
 
     def clear_change_highlights_for_file(self, path: Path) -> None:
         """Remove change highlights for a file."""
+        path = path.resolve()
         self._file_change_highlights.pop(path, None)
         if path == self.current_file:
             self._text_area.clear_change_highlights()
@@ -266,6 +271,7 @@ class EditorPanel(BasePanel):
         and the buffer has no unsaved edits. Sets _reloading flag to
         prevent on_text_area_changed from clearing change highlights.
         """
+        path = path.resolve()
         if path not in self._buffer_manager._buffers:
             return
 

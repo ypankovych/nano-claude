@@ -3,6 +3,9 @@
 Maintains before-snapshots of tracked files and computes added/modified/deleted
 line ranges using difflib.SequenceMatcher opcodes. Provides unified diff output
 for display in a diff view.
+
+All paths are resolved to absolute form for consistent comparison —
+DirectoryTree uses one form, watchfiles uses another.
 """
 
 from __future__ import annotations
@@ -14,16 +17,7 @@ from pathlib import Path
 
 @dataclass
 class FileChange:
-    """Result of computing a diff between a file's snapshot and its current content.
-
-    Attributes:
-        path: The file that changed.
-        added_lines: 0-indexed line numbers in the NEW file that were inserted.
-        modified_lines: 0-indexed line numbers in the NEW file that were replaced.
-        deleted_count: Number of lines deleted from the old file.
-        old_content: Content before the change (snapshot).
-        new_content: Content after the change (current on disk).
-    """
+    """Result of computing a diff between a file's snapshot and its current content."""
 
     path: Path
     added_lines: list[int] = field(default_factory=list)
@@ -34,27 +28,16 @@ class FileChange:
 
 
 class ChangeTracker:
-    """Tracks file snapshots and computes line-level diffs.
-
-    Usage:
-        1. Call ensure_snapshot(path) when a file is opened or before Claude edits.
-        2. When FileSystemChanged fires, call compute_change(path) to get the diff.
-        3. Use get_unified_diff(path) to display standard diff output.
-        4. Call clear_change(path) when the user starts editing a changed file.
-    """
+    """Tracks file snapshots and computes line-level diffs."""
 
     def __init__(self) -> None:
         self._snapshots: dict[Path, str] = {}
         self._pending_changes: dict[Path, FileChange] = {}
-        # Paths recently saved by the user — ignore next filesystem event
         self._user_saved: set[Path] = set()
 
     def ensure_snapshot(self, path: Path) -> None:
-        """Read file content and store as snapshot if not already tracked.
-
-        Silently ignores files that cannot be read (permission errors,
-        missing files, etc.).
-        """
+        """Read file content and store as snapshot if not already tracked."""
+        path = path.resolve()
         if path in self._snapshots:
             return
         try:
@@ -64,15 +47,9 @@ class ChangeTracker:
             pass
 
     def mark_user_saved(self, path: Path) -> None:
-        """Mark a file as just saved by the user.
-
-        The next filesystem event for this path will be ignored (it's the
-        user's own save, not Claude's edit). Also updates the snapshot to
-        match the saved content.
-        """
+        """Mark a file as just saved by the user — ignore next filesystem event."""
+        path = path.resolve()
         self._user_saved.add(path)
-        # Update snapshot to current content so future Claude edits
-        # diff against the user's saved version
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
             self._snapshots[path] = content
@@ -82,19 +59,14 @@ class ChangeTracker:
     def compute_change(self, path: Path) -> FileChange | None:
         """Compare current file on disk against stored snapshot.
 
-        Returns None if:
-        - No snapshot exists
-        - File was just saved by the user (not Claude)
-        - Content is unchanged
-
-        Does NOT update the snapshot after computing — keeps the pre-edit
-        snapshot so diff view and jump always reference the original state.
-        Call update_snapshot() explicitly after user acknowledges the change.
+        Returns None if file was user-saved or content unchanged.
+        For files without a prior snapshot, reports all lines as added.
         """
+        path = path.resolve()
+
         # Skip user's own saves
         if path in self._user_saved:
             self._user_saved.discard(path)
-            # Update snapshot to match user's save
             try:
                 content = path.read_text(encoding="utf-8", errors="replace")
                 self._snapshots[path] = content
@@ -103,8 +75,7 @@ class ChangeTracker:
             return None
 
         if path not in self._snapshots:
-            # No pre-edit snapshot exists. Report a change with ALL lines
-            # marked as added (we don't know what the file looked like before).
+            # No pre-edit snapshot — report all lines as added
             try:
                 new_content = path.read_text(encoding="utf-8", errors="replace")
             except OSError:
@@ -147,7 +118,6 @@ class ChangeTracker:
                 added_lines.extend(range(j1, j2))
             elif tag == "replace":
                 modified_lines.extend(range(j1, j2))
-                # Also count any net deletions in the replace
                 old_count = i2 - i1
                 new_count = j2 - j1
                 if old_count > new_count:
@@ -165,18 +135,11 @@ class ChangeTracker:
         )
 
         self._pending_changes[path] = change
-        # Do NOT update snapshot here — keep the pre-edit snapshot so
-        # diff view and jump always show the full change from original.
-        # Snapshot is updated when user saves or acknowledges the change.
-
         return change
 
     def update_snapshot(self, path: Path) -> None:
-        """Update snapshot to current disk content.
-
-        Call after user acknowledges a change (edits the file, saves, etc.)
-        so the next Claude edit diffs against the latest version.
-        """
+        """Update snapshot to current disk content."""
+        path = path.resolve()
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
             self._snapshots[path] = content
@@ -184,13 +147,8 @@ class ChangeTracker:
             pass
 
     def get_unified_diff(self, path: Path) -> str:
-        """Return a standard unified diff string for a pending change.
-
-        Uses difflib.unified_diff with fromfile="a/{name}" tofile="b/{name}"
-        and n=3 context lines.
-
-        Returns empty string if no pending change exists.
-        """
+        """Return a standard unified diff string for a pending change."""
+        path = path.resolve()
         change = self._pending_changes.get(path)
         if change is None:
             return ""
@@ -210,6 +168,7 @@ class ChangeTracker:
 
     def get_pending_change(self, path: Path) -> FileChange | None:
         """Return the pending change for a path, or None."""
+        path = path.resolve()
         return self._pending_changes.get(path)
 
     def get_all_pending_paths(self) -> list[Path]:
@@ -218,6 +177,7 @@ class ChangeTracker:
 
     def clear_change(self, path: Path) -> None:
         """Remove pending change for a path."""
+        path = path.resolve()
         self._pending_changes.pop(path, None)
 
     def clear_all(self) -> None:
