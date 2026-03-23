@@ -7,6 +7,7 @@ using pyte for terminal emulation and Rich for styled rendering.
 from __future__ import annotations
 
 import os
+import re
 import threading
 
 import pyte
@@ -14,6 +15,17 @@ from rich.text import Text
 from textual import events
 from textual.message import Message
 from textual.widget import Widget
+
+# Escape sequences that pyte doesn't handle — strip before feeding to pyte stream.
+# These include kitty keyboard protocol, bracketed paste mode extensions, and
+# cursor save/restore sequences that leave trailing characters in the buffer.
+_UNSUPPORTED_ESC_RE = re.compile(
+    r"\x1b\[[\?=]?"               # CSI with optional ? or =
+    r"[0-9;]*"                    # numeric params
+    r"[u]"                        # the trailing 'u' (kitty keyboard / cursor restore)
+    r"|\x1b\[>[0-9;]*[a-z]"      # CSI > sequences (xterm version queries)
+    r"|\x1b\[[0-9;]*[ ][a-z]"    # CSI Sp sequences (e.g., cursor style)
+)
 
 from nano_claude.terminal.pty_manager import PtyManager, render_pyte_screen, translate_key
 from nano_claude.terminal.status_parser import StatusParser
@@ -64,11 +76,18 @@ class TerminalWidget(Widget, can_focus=True):
     renders the screen buffer using Rich Text with full color support.
     """
 
+    # Hide Textual's native cursor — pyte renders its own via reverse style
+    CURSOR_BLINK = False
+    show_cursor = False
+
     DEFAULT_CSS = """
     TerminalWidget {
         overflow-y: auto;
         height: 1fr;
         width: 1fr;
+    }
+    TerminalWidget:focus {
+        /* No Textual cursor — pyte handles it */
     }
     """
 
@@ -135,7 +154,9 @@ class TerminalWidget(Widget, can_focus=True):
     def on_pty_data_received(self, message: PtyDataReceived) -> None:
         """Feed received PTY data into the pyte terminal emulator and status parser."""
         if self._stream is not None:
-            self._stream.feed(message.data)
+            # Strip escape sequences pyte doesn't handle (kitty keyboard, etc.)
+            cleaned = _UNSUPPORTED_ESC_RE.sub("", message.data)
+            self._stream.feed(cleaned)
             self.refresh()
         # Feed data to status parser and bubble any detected messages
         for msg in self._status_parser.feed(message.data):
