@@ -285,8 +285,9 @@ class NanoClaudeApp(App):
     def on_mount(self) -> None:
         """Initialize responsive collapse, change tracker, and file watcher."""
         self._handle_responsive_collapse(self.size.width)
-        # Initialize change tracker (lazy — snapshots files on first access)
+        # Initialize change tracker and snapshot all project files
         self._change_tracker = ChangeTracker()
+        self._change_tracker.snapshot_directory(Path.cwd())
         self._last_changed_path = None
         self._last_changed_paths = []
         # Start filesystem watcher for auto-refresh of file tree
