@@ -112,7 +112,6 @@ class EditorPanel(BasePanel):
         Saves current buffer state before switching.
         """
         path = path.resolve()
-        """
         # Exit diff mode if active
         if self._diff_mode:
             self._diff_view.display = False
@@ -383,7 +382,7 @@ class EditorPanel(BasePanel):
     # ----- Private helpers -----
 
     def _save_buffer_state(self) -> None:
-        """Store current TextArea state into the current file's buffer."""
+        """Store current TextArea state into the buffer for the current file."""
         if self.current_file is None:
             return
         try:
