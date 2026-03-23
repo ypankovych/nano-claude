@@ -303,6 +303,16 @@ class NanoClaudeApp(App):
         self.run_worker(
             self._file_watcher.start(), exclusive=True, name="file-watcher"
         )
+        # Wire ambient context callback to terminal widget
+        self.call_later(self._wire_pinned_context_callback)
+
+    def _wire_pinned_context_callback(self) -> None:
+        """Connect the pinned context callback to the terminal widget."""
+        try:
+            terminal = self.query_one("#claude-terminal", TerminalWidget)
+            terminal._get_pinned_context = self._get_pinned_context_text
+        except Exception:
+            pass  # Claude not available; callback remains None
 
     def action_focus_panel(self, panel_id: str) -> None:
         """Focus a specific panel by its DOM id. Does nothing if panel is hidden."""

@@ -27,8 +27,9 @@ _UNSUPPORTED_ESC_RE = re.compile(
     r"|\x1b\[c"                   # Device attributes query
 )
 
+from nano_claude.models.code_context import write_to_pty_bracketed
 from nano_claude.terminal.pty_manager import PtyManager, render_pyte_screen, translate_key
-from nano_claude.terminal.status_parser import StatusParser
+from nano_claude.terminal.status_parser import ClaudeState, StatusParser
 
 # Keys reserved for app-level bindings -- do NOT capture these.
 RESERVED_KEYS: frozenset[str] = frozenset({
@@ -103,6 +104,7 @@ class TerminalWidget(Widget, can_focus=True):
         self._pty_manager = PtyManager()
         self._status_parser = StatusParser()
         self._running = False
+        self._get_pinned_context: callable | None = None  # Set by app for ambient context
 
     def on_mount(self) -> None:
         """Defer PTY start until layout determines widget size."""
@@ -188,10 +190,18 @@ class TerminalWidget(Widget, can_focus=True):
         if event.key in RESERVED_KEYS:
             return
 
+        fd = self._pty_manager.fd
+
+        # Ambient context injection: on Enter, if context is pinned and Claude is idle
+        if event.key == "enter" and self._get_pinned_context is not None:
+            context_text = self._get_pinned_context()
+            if context_text and self._status_parser.current_state == ClaudeState.IDLE:
+                write_to_pty_bracketed(fd, context_text)
+
         char = translate_key(event)
         if char is not None:
             try:
-                os.write(self._pty_manager.fd, char.encode("utf-8"))
+                os.write(fd, char.encode("utf-8"))
             except OSError:
                 pass
             event.prevent_default()
