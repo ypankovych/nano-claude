@@ -4,8 +4,10 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from rich.text import Text
 
 from nano_claude.services.change_tracker import ChangeTracker, FileChange
+from nano_claude.widgets.diff_view import DiffView, MAX_DIFF_LINES
 from nano_claude.widgets.searchable_text_area import SearchableTextArea
 
 
@@ -247,3 +249,84 @@ class TestReservedKeys:
         from nano_claude.terminal.widget import RESERVED_KEYS
 
         assert "ctrl+d" in RESERVED_KEYS
+
+
+# ---------------------------------------------------------------------------
+# DiffView widget tests
+# ---------------------------------------------------------------------------
+
+
+class TestDiffView:
+    """Verify DiffView renders colored unified diffs."""
+
+    def test_diff_view_colors_additions(self):
+        """DiffView.set_diff renders '+' lines with green style."""
+        dv = DiffView()
+        diff_text = "+added line\n"
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        # Check that the green style is applied to the added line
+        spans = renderable._spans
+        assert any("green" in str(s.style) for s in spans)
+
+    def test_diff_view_colors_deletions(self):
+        """DiffView.set_diff renders '-' lines with red style."""
+        dv = DiffView()
+        diff_text = "-deleted line\n"
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        spans = renderable._spans
+        assert any("red" in str(s.style) for s in spans)
+
+    def test_diff_view_colors_hunk_headers(self):
+        """DiffView.set_diff renders '@@' lines with cyan style."""
+        dv = DiffView()
+        diff_text = "@@ -1,3 +1,4 @@\n"
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        spans = renderable._spans
+        assert any("cyan" in str(s.style) for s in spans)
+
+    def test_diff_view_colors_file_headers(self):
+        """DiffView.set_diff renders '+++' and '---' lines with bold style."""
+        dv = DiffView()
+        diff_text = "--- a/file.py\n+++ b/file.py\n"
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        spans = renderable._spans
+        assert any("bold" in str(s.style) for s in spans)
+
+    def test_diff_view_context_lines(self):
+        """DiffView.set_diff renders context lines without special style."""
+        dv = DiffView()
+        diff_text = " context line\n"
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        # Context lines have no spans applied (default style)
+        plain_text = renderable.plain
+        assert "context line" in plain_text
+
+    def test_diff_view_empty_shows_message(self):
+        """DiffView with empty diff shows 'No changes to display' message."""
+        dv = DiffView()
+        dv.set_diff("")
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        assert "No changes to display" in renderable.plain
+
+    def test_diff_view_truncation(self):
+        """DiffView truncates diffs longer than MAX_DIFF_LINES with message."""
+        dv = DiffView()
+        # Create a diff with more than MAX_DIFF_LINES lines
+        lines = [f"+line {i}\n" for i in range(MAX_DIFF_LINES + 100)]
+        diff_text = "".join(lines)
+        dv.set_diff(diff_text)
+        renderable = dv.renderable
+        assert isinstance(renderable, Text)
+        assert "truncated" in renderable.plain.lower()
+        assert str(MAX_DIFF_LINES) in renderable.plain
