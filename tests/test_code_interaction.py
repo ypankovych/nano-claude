@@ -138,3 +138,12 @@ class TestConstants:
 
     def test_max_selection_bytes(self) -> None:
         assert MAX_SELECTION_BYTES == 8192
+
+
+class TestReservedKeys:
+    """Tests for RESERVED_KEYS containing ctrl+l."""
+
+    def test_ctrl_l_is_reserved(self) -> None:
+        from nano_claude.terminal.widget import RESERVED_KEYS
+
+        assert "ctrl+l" in RESERVED_KEYS

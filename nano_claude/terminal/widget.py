@@ -36,6 +36,7 @@ RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+d",
     "ctrl+e",
     "ctrl+j",
+    "ctrl+l",        # send selection to Claude
     "ctrl+r",
     "ctrl+q",
     "ctrl+equal",

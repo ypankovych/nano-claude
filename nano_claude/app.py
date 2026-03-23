@@ -19,12 +19,14 @@ from nano_claude.config.settings import (
     DEFAULT_EDITOR_WIDTH,
     DEFAULT_TREE_WIDTH,
 )
+from nano_claude.models.code_context import write_to_pty_bracketed
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
 from nano_claude.services.change_tracker import ChangeTracker
 from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
 from nano_claude.terminal.status_parser import ClaudeState, CostUpdate, StatusUpdate
+from nano_claude.terminal.widget import TerminalWidget
 
 
 class ShutdownScreen(ModalScreen):
@@ -268,6 +270,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+j", "jump_to_change", "Jump to Change", id="jump.change", priority=True, show=True),
         # Diff view toggle
         Binding("ctrl+d", "toggle_diff", "Diff View", id="diff.toggle", priority=True, show=True),
+        # Send selection to Claude
+        Binding("ctrl+l", "send_to_claude", "Send to Claude", id="interact.send", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -641,6 +645,49 @@ class NanoClaudeApp(App):
         except Exception:
             pass
 
+    def action_send_to_claude(self) -> None:
+        """Send current editor selection to Claude's PTY input (Ctrl+L)."""
+        # Extract selection BEFORE switching focus (selection may clear on blur)
+        try:
+            editor = self.query_one(EditorPanel)
+        except Exception:
+            self.notify("Editor not available", severity="warning")
+            return
+
+        context = editor.get_selection_context()
+        if context is None:
+            self.notify("No file open", severity="warning")
+            return
+
+        # Get PTY fd from terminal widget
+        try:
+            terminal = self.query_one("#claude-terminal", TerminalWidget)
+        except Exception:
+            self.notify("Claude not running", severity="warning")
+            return
+
+        if not terminal._running or terminal._pty_manager.fd is None:
+            self.notify("Claude not running", severity="warning")
+            return
+
+        # Format and write to PTY
+        formatted = context.format_code_fence(Path.cwd())
+        write_to_pty_bracketed(terminal._pty_manager.fd, formatted)
+
+        # Notify user
+        try:
+            rel = context.file_path.relative_to(Path.cwd())
+        except ValueError:
+            rel = context.file_path.name
+        self.notify(
+            f"Sent {rel}:{context.start_line}-{context.end_line} to Claude",
+            severity="information",
+            timeout=3,
+        )
+
+        # Focus chat panel so user can type their prompt
+        self.action_focus_panel("chat")
+
     def action_restart_claude(self) -> None:
         """Restart the Claude Code subprocess."""
         try:
@@ -652,8 +699,6 @@ class NanoClaudeApp(App):
     def _stop_claude_pty(self) -> None:
         """Stop the Claude PTY subprocess if running."""
         try:
-            from nano_claude.terminal.widget import TerminalWidget
-
             terminal = self.query_one("#claude-terminal", TerminalWidget)
             terminal.stop_pty()
         except Exception:
