@@ -462,12 +462,12 @@ class NanoClaudeApp(App):
         """Sync modified file indicators and clear stale change tracking.
 
         Skip change-tracker cleanup during programmatic reloads (_reloading
-        flag) — only clear on actual user edits.
+        flag set by EditorPanel.reload_from_disk).
         """
         try:
             editor = self.query_one(EditorPanel)
             if editor._reloading:
-                return
+                return  # Flag consumed by editor's own handler
         except Exception:
             return
         self._sync_modified_paths()

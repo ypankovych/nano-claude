@@ -296,7 +296,9 @@ class EditorPanel(BasePanel):
             col = min(old_cursor[1], len(line_text))
             self._text_area.cursor_location = (row, col)
             self._update_title()
-            self._reloading = False
+            # NOTE: _reloading stays True until on_text_area_changed consumes it.
+            # TextArea.Changed is a queued message processed in the next event
+            # loop iteration, so setting _reloading=False here would be too early.
 
     def show_changed_files(self, paths: list[Path]) -> None:
         """Show the changed files overlay with a list of file paths."""
@@ -402,9 +404,10 @@ class EditorPanel(BasePanel):
         """Update buffer and title when TextArea content changes.
 
         Clears change highlights only on USER edits (not programmatic reloads).
-        The _reloading flag is set during reload_from_disk to suppress this.
+        The _reloading flag is set by reload_from_disk and consumed here.
         """
         if self._reloading:
+            self._reloading = False  # Consume the flag
             return
         if self.current_file is not None:
             self._buffer_manager.update_content(

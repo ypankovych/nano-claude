@@ -50,16 +50,18 @@ class TestEnsureSnapshot:
 class TestComputeChange:
     """Test ChangeTracker.compute_change diff computation."""
 
-    def test_returns_none_without_snapshot(self, tmp_path: Path):
-        """compute_change returns None when no snapshot exists for path."""
+    def test_reports_all_added_without_snapshot(self, tmp_path: Path):
+        """compute_change reports all lines as added when no snapshot exists."""
         from nano_claude.services.change_tracker import ChangeTracker
 
         tracker = ChangeTracker()
         f = tmp_path / "hello.py"
-        f.write_text("content")
+        f.write_text("line1\nline2\nline3\n")
 
         result = tracker.compute_change(f)
-        assert result is None
+        assert result is not None
+        assert result.added_lines == [0, 1, 2]
+        assert result.modified_lines == []
 
     def test_returns_none_when_content_unchanged(self, tmp_path: Path):
         """compute_change returns None when file content has not changed."""

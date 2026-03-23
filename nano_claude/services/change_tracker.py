@@ -103,13 +103,24 @@ class ChangeTracker:
             return None
 
         if path not in self._snapshots:
-            # Auto-snapshot files we haven't seen before
+            # No pre-edit snapshot exists. Report a change with ALL lines
+            # marked as added (we don't know what the file looked like before).
             try:
-                content = path.read_text(encoding="utf-8", errors="replace")
-                self._snapshots[path] = content
+                new_content = path.read_text(encoding="utf-8", errors="replace")
             except OSError:
-                pass
-            return None
+                return None
+            new_lines = new_content.splitlines()
+            change = FileChange(
+                path=path,
+                added_lines=list(range(len(new_lines))),
+                modified_lines=[],
+                deleted_count=0,
+                old_content="",
+                new_content=new_content,
+            )
+            self._pending_changes[path] = change
+            self._snapshots[path] = new_content
+            return change
 
         try:
             new_content = path.read_text(encoding="utf-8", errors="replace")
