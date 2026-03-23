@@ -137,8 +137,8 @@ class TestComputeChange:
         assert change.deleted_count >= 1
         assert len(change.added_lines) + len(change.modified_lines) >= 1
 
-    def test_snapshot_updated_after_compute(self, tmp_path: Path):
-        """After compute_change, snapshot is updated to new content."""
+    def test_snapshot_preserved_after_compute(self, tmp_path: Path):
+        """After compute_change, snapshot keeps original (pre-edit) content."""
         from nano_claude.services.change_tracker import ChangeTracker
 
         tracker = ChangeTracker()
@@ -149,7 +149,11 @@ class TestComputeChange:
         f.write_text("v2\n")
         tracker.compute_change(f)
 
-        # Now snapshot should be v2
+        # Snapshot should still be v1 — NOT auto-updated
+        assert tracker._snapshots[f] == "v1\n"
+
+        # Explicit update changes it
+        tracker.update_snapshot(f)
         assert tracker._snapshots[f] == "v2\n"
 
         # Second compute with same content should return None

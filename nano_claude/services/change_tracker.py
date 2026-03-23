@@ -46,6 +46,8 @@ class ChangeTracker:
     def __init__(self) -> None:
         self._snapshots: dict[Path, str] = {}
         self._pending_changes: dict[Path, FileChange] = {}
+        # Paths recently saved by the user — ignore next filesystem event
+        self._user_saved: set[Path] = set()
 
     def ensure_snapshot(self, path: Path) -> None:
         """Read file content and store as snapshot if not already tracked.
@@ -61,19 +63,52 @@ class ChangeTracker:
         except OSError:
             pass
 
+    def mark_user_saved(self, path: Path) -> None:
+        """Mark a file as just saved by the user.
+
+        The next filesystem event for this path will be ignored (it's the
+        user's own save, not Claude's edit). Also updates the snapshot to
+        match the saved content.
+        """
+        self._user_saved.add(path)
+        # Update snapshot to current content so future Claude edits
+        # diff against the user's saved version
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+            self._snapshots[path] = content
+        except OSError:
+            pass
+
     def compute_change(self, path: Path) -> FileChange | None:
         """Compare current file on disk against stored snapshot.
 
-        Uses difflib.SequenceMatcher.get_opcodes() to classify changes:
-        - "insert" opcodes -> added_lines (j1..j2 range in new file)
-        - "replace" opcodes -> modified_lines (j1..j2 range in new file)
-        - "delete" opcodes -> deleted_count (i2-i1 lines removed)
+        Returns None if:
+        - No snapshot exists
+        - File was just saved by the user (not Claude)
+        - Content is unchanged
 
-        Returns None if no snapshot exists or file content is unchanged.
-        After computing, updates the snapshot to the new content so the
-        next change diffs against the latest version.
+        Does NOT update the snapshot after computing — keeps the pre-edit
+        snapshot so diff view and jump always reference the original state.
+        Call update_snapshot() explicitly after user acknowledges the change.
         """
+        # Skip user's own saves
+        if path in self._user_saved:
+            self._user_saved.discard(path)
+            # Update snapshot to match user's save
+            try:
+                content = path.read_text(encoding="utf-8", errors="replace")
+                self._snapshots[path] = content
+            except OSError:
+                pass
+            return None
+
         if path not in self._snapshots:
+            # Auto-snapshot files we haven't seen before
+            try:
+                content = path.read_text(encoding="utf-8", errors="replace")
+                self._snapshots[path] = content
+            except OSError:
+                pass
             return None
 
         try:
@@ -119,10 +154,23 @@ class ChangeTracker:
         )
 
         self._pending_changes[path] = change
-        # Update snapshot to new content for next diff
-        self._snapshots[path] = new_content
+        # Do NOT update snapshot here — keep the pre-edit snapshot so
+        # diff view and jump always show the full change from original.
+        # Snapshot is updated when user saves or acknowledges the change.
 
         return change
+
+    def update_snapshot(self, path: Path) -> None:
+        """Update snapshot to current disk content.
+
+        Call after user acknowledges a change (edits the file, saves, etc.)
+        so the next Claude edit diffs against the latest version.
+        """
+        try:
+            content = path.read_text(encoding="utf-8", errors="replace")
+            self._snapshots[path] = content
+        except OSError:
+            pass
 
     def get_unified_diff(self, path: Path) -> str:
         """Return a standard unified diff string for a pending change.

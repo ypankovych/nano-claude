@@ -452,12 +452,24 @@ class NanoClaudeApp(App):
     def action_save_file(self) -> None:
         """Save the current file in the editor (Ctrl+S)."""
         editor = self.query_one(EditorPanel)
+        # Mark as user save BEFORE writing — so filesystem event is ignored
+        if editor.current_file is not None:
+            self._change_tracker.mark_user_saved(editor.current_file)
         editor.save_current_file()
         self._sync_modified_paths()
 
     def on_text_area_changed(self, event) -> None:
-        """Sync modified file indicators to the tree when editor content changes."""
+        """Sync modified file indicators and clear stale change tracking."""
         self._sync_modified_paths()
+        # When user edits a file, clear the pending change and update
+        # the snapshot so the next Claude edit diffs against user's version
+        try:
+            editor = self.query_one(EditorPanel)
+            if editor.current_file is not None:
+                self._change_tracker.clear_change(editor.current_file)
+                self._change_tracker.update_snapshot(editor.current_file)
+        except Exception:
+            pass
 
     def _sync_modified_paths(self) -> None:
         """Update the file tree's modified path indicators from the editor's buffers."""

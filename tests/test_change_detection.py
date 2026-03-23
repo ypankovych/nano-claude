@@ -145,8 +145,8 @@ class TestAppChangeDetection:
 class TestAutoReload:
     """Verify auto-reload logic in change tracker and editor."""
 
-    def test_auto_reload_updates_buffer(self, tmp_path: Path):
-        """After compute_change, snapshot reflects new content for auto-reload."""
+    def test_snapshot_preserved_after_compute(self, tmp_path: Path):
+        """After compute_change, snapshot keeps the ORIGINAL content (pre-edit)."""
         tracker = ChangeTracker()
         f = tmp_path / "test.py"
         f.write_text("original\n")
@@ -156,8 +156,27 @@ class TestAutoReload:
         change = tracker.compute_change(f)
 
         assert change is not None
-        # Snapshot now reflects new content
+        # Snapshot still has original — NOT auto-updated
+        assert tracker._snapshots[f] == "original\n"
+        # Explicit update_snapshot changes it
+        tracker.update_snapshot(f)
         assert tracker._snapshots[f] == "updated\n"
+
+    def test_user_save_ignored(self, tmp_path: Path):
+        """Files marked as user-saved are ignored by compute_change."""
+        tracker = ChangeTracker()
+        f = tmp_path / "test.py"
+        f.write_text("original\n")
+        tracker.ensure_snapshot(f)
+
+        tracker.mark_user_saved(f)
+        f.write_text("user edited\n")
+        change = tracker.compute_change(f)
+
+        # Should return None — user's own save, not Claude's edit
+        assert change is None
+        # Snapshot should be updated to user's saved content
+        assert tracker._snapshots[f] == "user edited\n"
 
 
 # ---------------------------------------------------------------------------
