@@ -19,7 +19,7 @@ from nano_claude.config.settings import (
     DEFAULT_EDITOR_WIDTH,
     DEFAULT_TREE_WIDTH,
 )
-from nano_claude.models.code_context import write_to_pty_bracketed
+from nano_claude.models.code_context import CodeContext, write_to_pty_bracketed
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
@@ -237,6 +237,9 @@ class NanoClaudeApp(App):
     _last_changed_paths: list[Path] = []
     _last_changed_lines: dict[Path, int] = {}  # path -> first changed line
 
+    # Ambient context pinning (Ctrl+P)
+    _pinned_context: CodeContext | None = None
+
     BINDINGS = [
         # Panel focus -- Ctrl+letter as primary (universally supported across terminals)
         # Per research Pitfall 1: Ctrl+number is unreliable in many terminals (iTerm2, tmux, screen)
@@ -272,6 +275,7 @@ class NanoClaudeApp(App):
         Binding("ctrl+d", "toggle_diff", "Diff View", id="diff.toggle", priority=True, show=True),
         # Send selection to Claude
         Binding("ctrl+l", "send_to_claude", "Send to Claude", id="interact.send", priority=True, show=True),
+        Binding("ctrl+p", "pin_context", "Pin Context", id="interact.pin", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -444,6 +448,13 @@ class NanoClaudeApp(App):
             parts.append(f"Claude: {self.claude_status}")
         if self.claude_cost:
             parts.append(self.claude_cost)
+        # Pinned context indicator
+        if self._pinned_context is not None:
+            try:
+                rel = self._pinned_context.file_path.relative_to(Path.cwd())
+            except ValueError:
+                rel = self._pinned_context.file_path.name
+            parts.append(f"Pinned: {rel}:{self._pinned_context.start_line}-{self._pinned_context.end_line}")
         status_text = CLAUDE_STATUS_SEPARATOR.join(parts)
         # Combine file path with Claude status
         if self._current_file_path and status_text:
@@ -687,6 +698,45 @@ class NanoClaudeApp(App):
 
         # Focus chat panel so user can type their prompt
         self.action_focus_panel("chat")
+
+    def action_pin_context(self) -> None:
+        """Toggle pinning/unpinning code context for ambient injection (Ctrl+P)."""
+        if self._pinned_context is not None:
+            # Unpin
+            self._pinned_context = None
+            self.notify("Unpinned context", severity="information", timeout=3)
+            self._update_status_bar()
+            return
+
+        # Pin current selection
+        try:
+            editor = self.query_one(EditorPanel)
+        except Exception:
+            self.notify("Editor not available", severity="warning")
+            return
+
+        context = editor.get_selection_context()
+        if context is None:
+            self.notify("No file open", severity="warning")
+            return
+
+        self._pinned_context = context
+        try:
+            rel = context.file_path.relative_to(Path.cwd())
+        except ValueError:
+            rel = context.file_path.name
+        self.notify(
+            f"Pinned: {rel}:{context.start_line}-{context.end_line}",
+            severity="information",
+            timeout=3,
+        )
+        self._update_status_bar()
+
+    def _get_pinned_context_text(self) -> str | None:
+        """Return formatted pinned context for PTY injection, or None if nothing pinned."""
+        if self._pinned_context is None:
+            return None
+        return self._pinned_context.format_code_fence(Path.cwd())
 
     def action_restart_claude(self) -> None:
         """Restart the Claude Code subprocess."""

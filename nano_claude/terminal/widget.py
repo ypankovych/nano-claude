@@ -37,6 +37,7 @@ RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+e",
     "ctrl+j",
     "ctrl+l",        # send selection to Claude
+    "ctrl+p",        # pin/unpin ambient context
     "ctrl+r",
     "ctrl+q",
     "ctrl+equal",
