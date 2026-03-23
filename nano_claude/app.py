@@ -523,33 +523,16 @@ class NanoClaudeApp(App):
 
         for change_type, path_str in event.changes:
             if change_type in (Change.modified, Change.added):
-                path = Path(path_str)
+                path = Path(path_str).resolve()
                 if not path.is_file():
                     continue
 
                 # Compute diff if we have a snapshot
                 file_change = self._change_tracker.compute_change(path)
 
-                # DEBUG: log what compute_change returned
-                if file_change is not None:
-                    _added = len(file_change.added_lines)
-                    _modified = len(file_change.modified_lines)
-                    _match = path.resolve() == (editor.current_file.resolve() if editor.current_file else None)
-                    self.notify(
-                        f"[DEBUG] change: +{_added} ~{_modified} | match={_match} | path={path.name}",
-                        severity="warning", timeout=15,
-                    )
-                else:
-                    self.notify(f"[DEBUG] compute_change returned None for {path.name}", severity="error", timeout=10)
-
                 # Auto-reload open buffers
-                in_buffer = path in editor._buffer_manager._buffers
-                # Also check resolved path
-                resolved = path.resolve()
-                in_buffer_resolved = resolved in editor._buffer_manager._buffers
-                if in_buffer or in_buffer_resolved:
-                    buf_path = path if in_buffer else resolved
-                    buf = editor._buffer_manager._buffers[buf_path]
+                if path in editor._buffer_manager._buffers:
+                    buf = editor._buffer_manager._buffers[path]
                     if buf.is_modified:
                         self._show_conflict_prompt(path)
                     else:
@@ -627,10 +610,17 @@ class NanoClaudeApp(App):
 
         try:
             editor = self.query_one(EditorPanel)
-            editor.open_file(path)
-            # Scroll to first changed line (stored during change detection)
-            first_line = self._last_changed_lines.get(path, 0)
-            editor.scroll_to_line(first_line)
+            resolved = path.resolve()
+            editor.open_file(resolved)
+            # Re-apply highlights (open_file restores from _file_change_highlights)
+            # Also try with original path form in case stored differently
+            if resolved in editor._file_change_highlights:
+                added, modified = editor._file_change_highlights[resolved]
+                editor._text_area.set_change_highlights(added, modified)
+            # Scroll to first changed line
+            first_line = self._last_changed_lines.get(path, self._last_changed_lines.get(resolved, 0))
+            if first_line > 0:
+                editor.scroll_to_line(first_line)
         except Exception:
             pass
 
