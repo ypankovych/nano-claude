@@ -59,6 +59,17 @@ class ShutdownScreen(ModalScreen):
         self.set_timer(0.1, self._do_shutdown)
 
     def _do_shutdown(self) -> None:
+        import os as _os
+        import sys
+        import threading
+
+        # Schedule a hard kill if Textual's exit takes too long
+        def _force_kill():
+            sys.stdout.write("\x1b[?1049l\x1b[?25h")
+            sys.stdout.flush()
+            _os._exit(0)
+
+        threading.Timer(0.5, _force_kill).start()
         self.app._do_final_exit()
 
 
