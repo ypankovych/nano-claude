@@ -28,7 +28,7 @@ _UNSUPPORTED_ESC_RE = re.compile(
 )
 
 from nano_claude.models.code_context import write_to_pty_bracketed
-from nano_claude.terminal.pty_manager import PtyManager, render_pyte_screen, translate_key
+from nano_claude.terminal.pty_manager import PtyManager, _render_history_line, render_pyte_screen, translate_key
 from nano_claude.terminal.status_parser import ClaudeState, StatusParser
 
 # Keys reserved for app-level bindings -- do NOT capture these.
@@ -46,7 +46,6 @@ RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+r",
     "ctrl+s",
     "ctrl+t",        # toggle terminal panel
-    "ctrl+w",        # close terminal tab
     "ctrl+equal",
     "ctrl+minus",
     "ctrl+backslash",
@@ -74,6 +73,19 @@ class PtyExited(Message):
     def __init__(self, exit_code: int | None = None) -> None:
         super().__init__()
         self.exit_code = exit_code
+
+
+class CloseTabRequested(Message):
+    """Posted when user presses Ctrl+W to close this terminal tab."""
+    pass
+
+
+class SwitchTabRequested(Message):
+    """Posted when user presses Ctrl+PageUp/PageDown to switch tabs."""
+
+    def __init__(self, direction: int) -> None:
+        super().__init__()
+        self.direction = direction  # -1 = prev, +1 = next
 
 
 class TerminalWidget(Widget, can_focus=True):
@@ -112,6 +124,7 @@ class TerminalWidget(Widget, can_focus=True):
         self._render_dirty = False  # Throttle flag for ~30fps rendering
         self._render_timer: threading.Timer | None = None
         self._RENDER_INTERVAL = 0.033  # ~30fps
+        self._scroll_lines = 0  # Lines scrolled up from live view
 
     def on_mount(self) -> None:
         """Defer PTY start until layout determines widget size."""
@@ -170,6 +183,8 @@ class TerminalWidget(Widget, can_focus=True):
         Pyte screen buffer is updated immediately but visual refresh is
         throttled to ~30fps to keep the rest of the app responsive.
         """
+        if not self._running:
+            return
         if self._stream is not None:
             # Strip escape sequences pyte doesn't handle (kitty keyboard, etc.)
             cleaned = _UNSUPPORTED_ESC_RE.sub("", message.data)
@@ -195,12 +210,18 @@ class TerminalWidget(Widget, can_focus=True):
 
     def _do_throttled_refresh(self) -> None:
         """Flush pending render from the timer thread."""
+        if not self._running:
+            return
         if self._render_dirty:
             self._render_dirty = False
             try:
-                self.app.call_from_thread(self.refresh)
+                self.app.call_from_thread(self._refresh_and_scroll)
             except Exception:
                 pass
+
+    def _refresh_and_scroll(self) -> None:
+        """Refresh content."""
+        self.refresh()
 
     def _handle_pty_exit(self) -> None:
         """Handle PTY subprocess exit."""
@@ -218,6 +239,27 @@ class TerminalWidget(Widget, can_focus=True):
     def on_key(self, event: events.Key) -> None:
         """Forward key events to the PTY subprocess."""
         if not self._running or self._pty_manager.fd is None:
+            return
+
+        # Snap back to live view on any keypress
+        if self._scroll_lines > 0:
+            self._scroll_lines = 0
+            self.refresh()
+
+        # Ctrl+W: request tab close (bubbles to TerminalPanel)
+        if event.key == "ctrl+w":
+            event.stop()
+            self.post_message(CloseTabRequested())
+            return
+
+        # Ctrl+Shift+Left/Right: switch tabs
+        if event.key == "ctrl+shift+left":
+            event.stop()
+            self.post_message(SwitchTabRequested(-1))
+            return
+        if event.key == "ctrl+shift+right":
+            event.stop()
+            self.post_message(SwitchTabRequested(1))
             return
 
         # Let app-level bindings bubble up
@@ -269,7 +311,7 @@ class TerminalWidget(Widget, can_focus=True):
                 os.write(fd, char.encode("utf-8"))
             except OSError:
                 pass
-            event.prevent_default()
+            event.stop()
 
     def on_resize(self, event: events.Resize) -> None:
         """Resize the pyte screen and PTY when the widget resizes."""
@@ -283,17 +325,51 @@ class TerminalWidget(Widget, can_focus=True):
                 pass
 
     def render(self) -> Text:
-        """Render the pyte screen buffer as Rich Text."""
+        """Render the pyte screen buffer, with history when scrolled up."""
         if self._screen is None:
             return Text("Starting Claude Code...")
 
-        lines = render_pyte_screen(self._screen, cursor_visible=False)
+        if self._scroll_lines == 0:
+            # Live view — just render screen buffer
+            lines = render_pyte_screen(self._screen, cursor_visible=False)
+        else:
+            # Scrolled up — mix history + screen lines
+            history = list(self._screen.history.top) if hasattr(self._screen, "history") else []
+            cols = self._screen.columns
+            screen_lines = render_pyte_screen(self._screen, cursor_visible=False)
+            history_rendered = [_render_history_line(h, cols) for h in history]
+            all_lines = history_rendered + screen_lines
+            visible = self._screen.lines
+            end = len(all_lines) - self._scroll_lines
+            start = max(0, end - visible)
+            end = max(start, end)
+            lines = all_lines[start:end]
+            # Pad if not enough lines
+            while len(lines) < visible:
+                lines.append(Text(""))
+
         result = Text()
         for i, line in enumerate(lines):
             if i > 0:
                 result.append("\n")
             result.append_text(line)
         return result
+
+    def on_mouse_scroll_up(self, event) -> None:
+        """Scroll up through terminal history."""
+        if self._screen is not None and hasattr(self._screen, "history"):
+            max_scroll = len(self._screen.history.top)
+            if max_scroll > 0:
+                self._scroll_lines = min(self._scroll_lines + 3, max_scroll)
+                self.refresh()
+            event.stop()
+
+    def on_mouse_scroll_down(self, event) -> None:
+        """Scroll down through terminal history."""
+        if self._scroll_lines > 0:
+            self._scroll_lines = max(0, self._scroll_lines - 3)
+            self.refresh()
+            event.stop()
 
     def stop_pty(self) -> None:
         """Stop the PTY subprocess."""

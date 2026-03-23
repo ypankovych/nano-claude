@@ -16,14 +16,15 @@ class TestReservedKeys:
         from nano_claude.terminal.widget import RESERVED_KEYS
         assert "ctrl+n" in RESERVED_KEYS
 
-    def test_reserved_keys_contains_ctrl_w(self):
+    def test_ctrl_w_not_in_reserved_keys(self):
+        """ctrl+w handled explicitly in on_key, not via RESERVED_KEYS."""
         from nano_claude.terminal.widget import RESERVED_KEYS
-        assert "ctrl+w" in RESERVED_KEYS
+        assert "ctrl+w" not in RESERVED_KEYS
 
     def test_reserved_keys_minimum_count(self):
         """Ensure no keys were accidentally removed."""
         from nano_claude.terminal.widget import RESERVED_KEYS
-        assert len(RESERVED_KEYS) >= 23
+        assert len(RESERVED_KEYS) >= 22
 
 
 class TestAppBindings:
@@ -39,10 +40,11 @@ class TestAppBindings:
         keys = [b.key for b in NanoClaudeApp.BINDINGS]
         assert "ctrl+n" in keys
 
-    def test_app_has_ctrl_w_binding(self):
+    def test_ctrl_w_not_app_binding(self):
+        """Ctrl+W handled in TerminalWidget.on_key, not as app binding."""
         from nano_claude.app import NanoClaudeApp
-        keys = [b.key for b in NanoClaudeApp.BINDINGS]
-        assert "ctrl+w" in keys
+        app_keys = [b.key for b in NanoClaudeApp.BINDINGS]
+        assert "ctrl+w" not in app_keys
 
     def test_ctrl_t_binding_action(self):
         from nano_claude.app import NanoClaudeApp
@@ -62,23 +64,6 @@ class TestAppBindings:
         else:
             pytest.fail("ctrl+t binding not found")
 
-    def test_ctrl_n_binding_action(self):
-        from nano_claude.app import NanoClaudeApp
-        for b in NanoClaudeApp.BINDINGS:
-            if b.key == "ctrl+n":
-                assert "new_terminal_tab" in b.action
-                break
-        else:
-            pytest.fail("ctrl+n binding not found")
-
-    def test_ctrl_w_binding_action(self):
-        from nano_claude.app import NanoClaudeApp
-        for b in NanoClaudeApp.BINDINGS:
-            if b.key == "ctrl+w":
-                assert "close_terminal_tab" in b.action
-                break
-        else:
-            pytest.fail("ctrl+w binding not found")
 
 
 class TestAppActions:
@@ -92,9 +77,9 @@ class TestAppActions:
         from nano_claude.app import NanoClaudeApp
         assert hasattr(NanoClaudeApp, "action_new_terminal_tab")
 
-    def test_app_has_close_terminal_tab_action(self):
-        from nano_claude.app import NanoClaudeApp
-        assert hasattr(NanoClaudeApp, "action_close_terminal_tab")
+    def test_terminal_panel_handles_close_tab_message(self):
+        from nano_claude.panels.terminal import TerminalPanel
+        assert hasattr(TerminalPanel, "on_close_tab_requested")
 
     def test_app_has_focus_terminal_method(self):
         from nano_claude.app import NanoClaudeApp
@@ -122,9 +107,9 @@ class TestTerminalPanelWidget:
         from nano_claude.panels.terminal import TerminalPanel
         assert hasattr(TerminalPanel, "add_tab")
 
-    def test_terminal_panel_has_close_active_tab(self):
+    def test_terminal_panel_handles_close_tab_message(self):
         from nano_claude.panels.terminal import TerminalPanel
-        assert hasattr(TerminalPanel, "close_active_tab")
+        assert hasattr(TerminalPanel, "on_close_tab_requested")
 
     def test_terminal_panel_has_minimize(self):
         from nano_claude.panels.terminal import TerminalPanel

@@ -281,7 +281,6 @@ class NanoClaudeApp(App):
         # Terminal panel
         Binding("ctrl+t", "toggle_terminal", "Terminal", id="terminal.toggle", priority=True, show=True),
         Binding("ctrl+n", "new_terminal_tab", "New Tab", id="terminal.new_tab", priority=True, show=False),
-        Binding("ctrl+w", "close_terminal_tab", "Close Tab", id="terminal.close_tab", priority=True, show=False),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -805,19 +804,6 @@ class NanoClaudeApp(App):
         if not self._panel_has_focus(panel):
             return  # Not focused on terminal -- ignore
         panel.add_tab()
-
-    def action_close_terminal_tab(self) -> None:
-        """Close the active terminal tab (only when terminal is focused)."""
-        try:
-            panel = self.query_one("#terminal-panel", TerminalPanel)
-        except Exception:
-            return
-        if not self._panel_has_focus(panel):
-            return  # Not focused on terminal -- ignore
-        panel.close_active_tab()
-        # If panel just minimized (last tab closed), focus editor
-        if panel.is_minimized:
-            self.action_focus_panel("editor")
 
     def _stop_claude_pty(self) -> None:
         """Stop the Claude PTY subprocess if running."""

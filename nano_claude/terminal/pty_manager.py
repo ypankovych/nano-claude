@@ -142,6 +142,25 @@ def _resolve_color(color_name: str) -> str | None:
     return None
 
 
+def _render_history_line(row: dict, columns: int) -> Text:
+    """Render a single pyte history line to Rich Text."""
+    line = Text()
+    for col_idx in range(columns):
+        char = row[col_idx]
+        fg = _resolve_color(char.fg)
+        bg = _resolve_color(char.bg)
+        style = Style(
+            color=fg,
+            bgcolor=bg,
+            bold=char.bold,
+            italic=char.italics,
+            underline=char.underscore,
+            reverse=char.reverse,
+        )
+        line.append(char.data, style=style)
+    return line
+
+
 def render_pyte_screen(screen: pyte.Screen, cursor_visible: bool = True) -> list[Text]:
     """Convert a pyte Screen buffer to a list of Rich Text lines.
 
@@ -249,29 +268,27 @@ class PtyManager:
     def stop(self) -> None:
         """Stop the PTY subprocess.
 
-        Closes the master fd FIRST to unblock any read threads, then
-        sends SIGTERM to the child, waits briefly, escalates to SIGKILL.
+        Kill the child process FIRST so the slave PTY closes, which
+        unblocks any os.read() on the master fd. Then close the master fd.
+        (On macOS, os.close(fd) deadlocks if another thread is in os.read(fd).)
         """
-        # Close fd FIRST to unblock the read thread (os.read raises OSError)
+        if self._pid is not None:
+            try:
+                os.kill(self._pid, signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                pass
+            try:
+                os.waitpid(self._pid, 0)
+            except (OSError, ChildProcessError):
+                pass
+            self._pid = None
+
         if self._fd is not None:
             try:
                 os.close(self._fd)
             except OSError:
                 pass
             self._fd = None
-
-        if self._pid is not None:
-            # SIGKILL immediately — claude is a subprocess we own,
-            # no need to wait for graceful shutdown on quit.
-            try:
-                os.kill(self._pid, signal.SIGKILL)
-            except (OSError, ProcessLookupError):
-                pass
-            try:
-                os.waitpid(self._pid, os.WNOHANG)
-            except (OSError, ChildProcessError):
-                pass
-            self._pid = None
 
     def resize(self, cols: int, rows: int) -> None:
         """Resize the PTY terminal window."""

@@ -17,7 +17,7 @@ from nano_claude.config.settings import (
     TERMINAL_STATUS_RUNNING,
 )
 from nano_claude.panels.base import BasePanel
-from nano_claude.terminal.widget import PtyExited, TerminalWidget
+from nano_claude.terminal.widget import CloseTabRequested, PtyExited, SwitchTabRequested, TerminalWidget
 
 
 class TerminalPanel(BasePanel):
@@ -51,6 +51,7 @@ class TerminalPanel(BasePanel):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._tab_counter: int = 0
+        self._dead_tabs: set[str] = set()
 
     def compose(self) -> ComposeResult:
         self.panel_title = "Terminal"
@@ -66,7 +67,7 @@ class TerminalPanel(BasePanel):
         """Add a new shell tab to the terminal panel."""
         switcher = self.query_one("#terminal-switcher", ContentSwitcher)
 
-        if len(list(switcher.children)) >= TERMINAL_MAX_TABS:
+        if len([c for c in switcher.children if c.id not in self._dead_tabs]) >= TERMINAL_MAX_TABS:
             self.notify(
                 f"Maximum of {TERMINAL_MAX_TABS} terminal tabs reached.",
                 severity="warning",
@@ -82,39 +83,90 @@ class TerminalPanel(BasePanel):
         self._update_tab_bar()
         terminal.focus()
 
-    def close_active_tab(self) -> None:
-        """Close the currently active tab."""
-        switcher = self.query_one("#terminal-switcher", ContentSwitcher)
-
-        if switcher.current is None:
+    def on_close_tab_requested(self, message: CloseTabRequested) -> None:
+        """Handle Ctrl+W from a child TerminalWidget."""
+        message.stop()
+        sender = message._sender
+        if not isinstance(sender, TerminalWidget):
             return
 
-        current_id = switcher.current
+        switcher = self.query_one("#terminal-switcher", ContentSwitcher)
+        tab_id = sender.id
 
-        # Stop PTY before removal
-        try:
-            current_widget = switcher.get_child_by_id(current_id)
-            if isinstance(current_widget, TerminalWidget):
-                current_widget.stop_pty()
-        except Exception:
-            pass
+        # Stop PTY, mark dead
+        sender._closed_by_user = True
+        sender.stop_pty()
+        self._dead_tabs.add(tab_id)
 
-        remaining = [c for c in switcher.children if c.id != current_id]
+        # Find remaining live tabs
+        others = [c for c in switcher.children if c.id not in self._dead_tabs]
 
-        if remaining:
-            switcher.current = remaining[-1].id
+        # Switch before removing
+        if others:
+            switcher.current = others[-1].id
         else:
             switcher.current = None
 
-        try:
-            switcher.get_child_by_id(current_id).remove()
-        except Exception:
-            pass
+        # Remove the dead widget (async — completes next tick)
+        sender.remove()
 
         self._update_tab_bar()
 
-        if not remaining:
-            self.minimize()
+        if others:
+            if isinstance(others[-1], TerminalWidget):
+                others[-1].focus()
+        else:
+            # Last tab closed — create a fresh one
+            self.add_tab()
+
+    def on_switch_tab_requested(self, message: SwitchTabRequested) -> None:
+        """Handle Ctrl+PageUp/PageDown to switch tabs."""
+        message.stop()
+        switcher = self.query_one("#terminal-switcher", ContentSwitcher)
+        live = [c for c in switcher.children if c.id not in self._dead_tabs]
+        if len(live) < 2:
+            return
+        current_idx = next(
+            (i for i, c in enumerate(live) if c.id == switcher.current), 0
+        )
+        new_idx = (current_idx + message.direction) % len(live)
+        switcher.current = live[new_idx].id
+        self._update_tab_bar()
+        if isinstance(live[new_idx], TerminalWidget):
+            live[new_idx].focus()
+
+    def close_active_tab(self) -> None:
+        """Programmatic close (used by tests / external callers)."""
+        terminal = self.get_active_terminal()
+        if terminal is not None:
+            terminal.post_message(CloseTabRequested())
+
+    def on_pty_exited(self, message: PtyExited) -> None:
+        """Handle natural shell exit (user typed 'exit')."""
+        sender = message._sender
+        if not isinstance(sender, TerminalWidget):
+            return
+        if getattr(sender, "_closed_by_user", False):
+            return
+
+        terminal_id = sender.id
+        if terminal_id is None:
+            return
+
+        switcher = self.query_one("#terminal-switcher", ContentSwitcher)
+        exit_id = f"exited-{terminal_id}"
+        exit_msg = Static(
+            SHELL_EXITED_MESSAGE.format(exit_code=message.exit_code),
+            id=exit_id,
+        )
+        exit_msg.can_focus = True
+        switcher.mount(exit_msg)
+        switcher.current = exit_id
+        try:
+            sender.remove()
+        except Exception:
+            pass
+        self._update_tab_bar()
 
     def minimize(self) -> None:
         """Minimize the terminal panel to a single status line."""
@@ -123,10 +175,9 @@ class TerminalPanel(BasePanel):
     def restore(self) -> None:
         """Restore the terminal panel to full size."""
         switcher = self.query_one("#terminal-switcher", ContentSwitcher)
-
-        if not list(switcher.children):
+        live = [c for c in switcher.children if c.id not in self._dead_tabs]
+        if not live:
             self.add_tab()
-
         self.is_minimized = False
 
     def watch_is_minimized(self, minimized: bool) -> None:
@@ -161,7 +212,7 @@ class TerminalPanel(BasePanel):
         except Exception:
             return
 
-        children = list(switcher.children)
+        children = [c for c in switcher.children if c.id not in self._dead_tabs]
         parts: list[str] = []
 
         for i, child in enumerate(children, 1):
@@ -181,7 +232,7 @@ class TerminalPanel(BasePanel):
         except Exception:
             return
 
-        count = len(list(switcher.children))
+        count = len([c for c in switcher.children if c.id not in self._dead_tabs])
         if count > 0:
             status_line.update(
                 TERMINAL_STATUS_RUNNING.format(
@@ -190,38 +241,6 @@ class TerminalPanel(BasePanel):
             )
         else:
             status_line.update(TERMINAL_STATUS_IDLE)
-
-    def on_pty_exited(self, message: PtyExited) -> None:
-        """Handle shell exit within a tab."""
-        switcher = self.query_one("#terminal-switcher", ContentSwitcher)
-
-        # Find which terminal sent the exit message
-        sender = message._sender
-        if not isinstance(sender, TerminalWidget):
-            return
-
-        terminal_id = sender.id
-        if terminal_id is None:
-            return
-
-        # Create an exit message widget
-        exit_id = f"exited-{terminal_id}"
-        exit_msg = Static(
-            SHELL_EXITED_MESSAGE.format(exit_code=message.exit_code),
-            id=exit_id,
-        )
-        exit_msg.can_focus = True
-
-        # Mount the exit message, switch to it, remove the dead terminal
-        switcher.mount(exit_msg)
-        switcher.current = exit_id
-
-        try:
-            sender.remove()
-        except Exception:
-            pass
-
-        self._update_tab_bar()
 
     def get_active_terminal(self) -> TerminalWidget | None:
         """Return the currently active TerminalWidget, or None."""
@@ -254,6 +273,6 @@ class TerminalPanel(BasePanel):
         """Return the number of open tabs."""
         try:
             switcher = self.query_one("#terminal-switcher", ContentSwitcher)
-            return len(list(switcher.children))
+            return len([c for c in switcher.children if c.id not in self._dead_tabs])
         except Exception:
             return 0
