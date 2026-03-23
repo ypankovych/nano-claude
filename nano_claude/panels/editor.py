@@ -8,6 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import TextArea
 
 from nano_claude.config.settings import MAX_FILE_SIZE_BYTES
+from nano_claude.models.code_context import CodeContext, truncate_selection
 from nano_claude.models.file_buffer import (
     BufferManager,
     detect_indentation,
@@ -380,6 +381,41 @@ class EditorPanel(BasePanel):
         self._search_matches = []
         self._current_match_index = -1
         self._last_search_query = ""
+
+    # ----- Code context for Claude interaction -----
+
+    def get_selection_context(self) -> CodeContext | None:
+        """Extract the current editor selection (or current line) as a CodeContext.
+
+        Returns:
+            CodeContext with selected text and metadata, or None if no file is open.
+        """
+        if self.current_file is None:
+            return None
+        text_area = self._text_area
+        selected = text_area.selected_text
+        if selected:
+            start, end = text_area.selection
+            min_loc = min(start, end)
+            max_loc = max(start, end)
+            start_line = min_loc[0] + 1
+            end_line = max_loc[0] + 1
+            text = selected
+        else:
+            row, _col = text_area.cursor_location
+            line_text = text_area.document.get_line(row)
+            start_line = row + 1
+            end_line = row + 1
+            text = line_text
+        text, _was_truncated = truncate_selection(text)
+        language = detect_language(self.current_file)
+        return CodeContext(
+            file_path=self.current_file,
+            start_line=start_line,
+            end_line=end_line,
+            text=text,
+            language=language,
+        )
 
     # ----- Private helpers -----
 
