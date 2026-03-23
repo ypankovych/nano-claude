@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-23T18:06:40.541Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-23T18:12:21.851Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -57,6 +57,7 @@ Plan: 2 of 2
 | Phase 05 P01 | 7min | 2 tasks | 5 files |
 | Phase 05 P02 | 5min | 2 tasks | 3 files |
 | Phase 06 P01 | 2min | 2 tasks | 4 files |
+| Phase 06 P02 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 05]: Callback pattern for widget communication (_get_pinned_context callable) keeps terminal widget Textual-independent
 - [Phase 05]: ClaudeState.IDLE guard prevents ambient context injection while Claude is processing
 - [Phase 06]: ContentSwitcher for tab management with reactive minimize/restore state
+- [Phase 06]: Vertical(id='app-layout') wraps main-panels + terminal-panel for bottom panel layout
+- [Phase 06]: Focus-guarded app actions: check _panel_has_focus before delegating Ctrl+N/W to terminal panel
+- [Phase 06]: Three-state toggle: hidden->show+focus, visible-unfocused->focus, focused->minimize with focus moved to editor before minimize
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:06:40.539Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-23T18:12:21.849Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
