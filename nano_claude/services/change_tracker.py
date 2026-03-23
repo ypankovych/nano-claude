@@ -30,10 +30,58 @@ class ChangeTracker:
     2. set_snapshot() — called with BufferManager content for open files
     """
 
+    # File extensions to snapshot at startup (source code only, skip binaries)
+    _SNAPSHOT_EXTENSIONS: frozenset[str] = frozenset({
+        ".py", ".pyi", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+        ".rs", ".go", ".java", ".kt", ".c", ".cpp", ".h", ".hpp",
+        ".rb", ".php", ".swift", ".scala", ".sh", ".bash", ".zsh",
+        ".json", ".toml", ".yaml", ".yml", ".xml", ".html", ".htm",
+        ".css", ".scss", ".less", ".sql", ".md", ".markdown", ".txt",
+        ".cfg", ".ini", ".env", ".conf", ".dockerfile", ".makefile",
+        ".gitignore", ".editorconfig",
+    })
+    _MAX_SNAPSHOT_SIZE: int = 512_000  # 512KB per file
+
     def __init__(self) -> None:
         self._snapshots: dict[Path, str] = {}
         self._pending_changes: dict[Path, FileChange] = {}
         self._user_saved: set[Path] = set()
+
+    def snapshot_directory(self, root: Path) -> int:
+        """Snapshot all source files in a directory tree at startup.
+
+        Reads text content of all files with recognized extensions,
+        skipping hidden dirs, node_modules, __pycache__, .venv, etc.
+        Returns count of files snapshotted.
+        """
+        skip_dirs = {".git", "node_modules", "__pycache__", ".venv",
+                     ".mypy_cache", ".pytest_cache", ".ruff_cache",
+                     ".eggs", ".tox", "dist", "build", ".next"}
+        count = 0
+        try:
+            for item in root.rglob("*"):
+                if any(part in skip_dirs for part in item.parts):
+                    continue
+                if not item.is_file():
+                    continue
+                if item.suffix.lower() not in self._SNAPSHOT_EXTENSIONS:
+                    # Also snapshot files without extension if small
+                    if item.suffix and item.suffix.lower() not in self._SNAPSHOT_EXTENSIONS:
+                        continue
+                if item.stat().st_size > self._MAX_SNAPSHOT_SIZE:
+                    continue
+                resolved = item.resolve()
+                if resolved in self._snapshots:
+                    continue
+                try:
+                    content = item.read_text(encoding="utf-8", errors="replace")
+                    self._snapshots[resolved] = content
+                    count += 1
+                except (OSError, UnicodeDecodeError):
+                    pass
+        except OSError:
+            pass
+        return count
 
     def ensure_snapshot(self, path: Path) -> None:
         """Read file from disk and store as snapshot if not already tracked."""
