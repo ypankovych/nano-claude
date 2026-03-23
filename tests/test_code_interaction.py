@@ -252,8 +252,8 @@ class TestGetPinnedContextText:
 class TestAmbientContextInjection:
     """Tests for Enter key interception with ambient context injection."""
 
-    def test_enter_with_pinned_context_and_idle_injects(self) -> None:
-        """Enter key with pinned context and IDLE state injects context before Enter."""
+    def test_enter_with_pinned_context_prepends_to_prompt(self) -> None:
+        """Enter with pinned context clears input, writes context+user text, submits."""
         from nano_claude.terminal.status_parser import ClaudeState
         from nano_claude.terminal.widget import TerminalWidget
 
@@ -263,30 +263,35 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.IDLE
+        widget._input_buffer = "fix this bug"
         widget._get_pinned_context = MagicMock(
             return_value="```py\n# f.py lines 1-5\ncode\n```\n"
         )
 
-        written_data = bytearray()
+        writes = []
 
         def fake_write(fd, data):
-            written_data.extend(data)
+            writes.append(data)
             return len(data)
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
         with patch("nano_claude.terminal.widget.os.write", side_effect=fake_write):
-            with patch(
-                "nano_claude.terminal.widget.write_to_pty_bracketed"
-            ) as mock_bracketed:
-                with patch(
-                    "nano_claude.terminal.widget.translate_key", return_value="\r"
-                ):
-                    widget.on_key(event)
+            with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+                widget.on_key(event)
+                # Ctrl+U sent to clear input
+                assert b"\x15" in writes
+                # Context + user text written via bracketed paste
                 mock_bracketed.assert_called_once_with(
-                    42, "```py\n# f.py lines 1-5\ncode\n```\n"
+                    42, "```py\n# f.py lines 1-5\ncode\n```\n\n\nfix this bug"
                 )
+                # Enter sent to submit
+                assert b"\r" in writes
+        # Buffer cleared after submission
+        assert widget._input_buffer == ""
+        event.prevent_default.assert_called()
 
     def test_enter_without_pinned_context_no_injection(self) -> None:
         """Enter key without pinned context should not inject anything."""
@@ -298,16 +303,40 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._get_pinned_context = None
+        widget._input_buffer = "hello"
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
-        with patch(
-            "nano_claude.terminal.widget.write_to_pty_bracketed"
-        ) as mock_bracketed:
-            with patch(
-                "nano_claude.terminal.widget.translate_key", return_value="\r"
-            ):
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
+                with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                    widget.on_key(event)
+            mock_bracketed.assert_not_called()
+        # Buffer should be cleared on normal Enter
+        assert widget._input_buffer == ""
+
+    def test_enter_with_empty_buffer_no_injection(self) -> None:
+        """Enter with pinned context but empty buffer should not inject."""
+        from nano_claude.terminal.status_parser import ClaudeState
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._status_parser.current_state = ClaudeState.IDLE
+        widget._input_buffer = ""
+        widget._get_pinned_context = MagicMock(return_value="context")
+
+        event = MagicMock()
+        event.key = "enter"
+        event.character = None
+
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
                 with patch("nano_claude.terminal.widget.os.write", return_value=1):
                     widget.on_key(event)
             mock_bracketed.assert_not_called()
@@ -323,29 +352,60 @@ class TestAmbientContextInjection:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.THINKING
-        widget._get_pinned_context = MagicMock(
-            return_value="```py\ncode\n```\n"
-        )
+        widget._input_buffer = "hello"
+        widget._get_pinned_context = MagicMock(return_value="context")
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
-        with patch(
-            "nano_claude.terminal.widget.write_to_pty_bracketed"
-        ) as mock_bracketed:
-            with patch(
-                "nano_claude.terminal.widget.translate_key", return_value="\r"
-            ):
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
                 with patch("nano_claude.terminal.widget.os.write", return_value=1):
                     widget.on_key(event)
             mock_bracketed.assert_not_called()
+
+    def test_input_buffer_tracks_keystrokes(self) -> None:
+        """Input buffer tracks typed characters and handles backspace."""
+        from nano_claude.terminal.widget import TerminalWidget
+
+        widget = TerminalWidget.__new__(TerminalWidget)
+        widget._running = True
+        widget._pty_manager = MagicMock()
+        widget._pty_manager.fd = 42
+        widget._status_parser = MagicMock()
+        widget._get_pinned_context = None
+        widget._input_buffer = ""
+
+        with patch("nano_claude.terminal.widget.translate_key", return_value="x"):
+            with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                # Type 'h'
+                ev = MagicMock()
+                ev.key = "h"
+                ev.character = "h"
+                widget.on_key(ev)
+                assert widget._input_buffer == "h"
+
+                # Type 'i'
+                ev2 = MagicMock()
+                ev2.key = "i"
+                ev2.character = "i"
+                widget.on_key(ev2)
+                assert widget._input_buffer == "hi"
+
+                # Backspace
+                ev3 = MagicMock()
+                ev3.key = "backspace"
+                ev3.character = None
+                widget.on_key(ev3)
+                assert widget._input_buffer == "h"
 
 
 class TestContextInjectionGuard:
     """Tests for state guard preventing injection in non-IDLE states."""
 
     def test_idle_state_allows_injection(self) -> None:
-        """ClaudeState.IDLE allows context injection."""
+        """ClaudeState.IDLE allows context injection when buffer has content."""
         from nano_claude.terminal.status_parser import ClaudeState
         from nano_claude.terminal.widget import TerminalWidget
 
@@ -355,17 +415,16 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.IDLE
+        widget._input_buffer = "test prompt"
         widget._get_pinned_context = MagicMock(return_value="context")
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
-        with patch(
-            "nano_claude.terminal.widget.write_to_pty_bracketed"
-        ) as mock_bracketed:
-            with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
-                with patch("nano_claude.terminal.widget.os.write", return_value=1):
-                    widget.on_key(event)
+        with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
+            with patch("nano_claude.terminal.widget.os.write", return_value=1):
+                widget.on_key(event)
             mock_bracketed.assert_called_once()
 
     def test_thinking_state_blocks_injection(self) -> None:
@@ -378,10 +437,12 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.THINKING
+        widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
         with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
             with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
@@ -399,10 +460,12 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.TOOL_USE
+        widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
         with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
             with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):
@@ -420,10 +483,12 @@ class TestContextInjectionGuard:
         widget._pty_manager.fd = 42
         widget._status_parser = MagicMock()
         widget._status_parser.current_state = ClaudeState.PERMISSION
+        widget._input_buffer = "test"
         widget._get_pinned_context = MagicMock(return_value="context")
 
         event = MagicMock()
         event.key = "enter"
+        event.character = None
 
         with patch("nano_claude.terminal.widget.write_to_pty_bracketed") as mock_bracketed:
             with patch("nano_claude.terminal.widget.translate_key", return_value="\r"):

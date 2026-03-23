@@ -105,6 +105,7 @@ class TerminalWidget(Widget, can_focus=True):
         self._status_parser = StatusParser()
         self._running = False
         self._get_pinned_context: callable | None = None  # Set by app for ambient context
+        self._input_buffer: str = ""  # Track user's typed chars for context prepend
 
     def on_mount(self) -> None:
         """Defer PTY start until layout determines widget size."""
@@ -192,11 +193,42 @@ class TerminalWidget(Widget, can_focus=True):
 
         fd = self._pty_manager.fd
 
-        # Ambient context injection: on Enter, if context is pinned and Claude is idle
-        if event.key == "enter" and self._get_pinned_context is not None:
-            context_text = self._get_pinned_context()
-            if context_text and self._status_parser.current_state == ClaudeState.IDLE:
-                write_to_pty_bracketed(fd, context_text)
+        # Ambient context injection: on Enter, clear input, prepend context
+        # to user's typed text, and submit as one combined prompt.
+        if event.key == "enter":
+            if (
+                self._get_pinned_context is not None
+                and self._input_buffer
+                and self._status_parser.current_state == ClaudeState.IDLE
+            ):
+                context_text = self._get_pinned_context()
+                if context_text:
+                    user_text = self._input_buffer
+                    self._input_buffer = ""
+                    # Clear the visible input line (Ctrl+U kills the line)
+                    try:
+                        os.write(fd, b"\x15")
+                    except OSError:
+                        pass
+                    # Write context + user's prompt as one message
+                    full_prompt = context_text + "\n\n" + user_text
+                    write_to_pty_bracketed(fd, full_prompt)
+                    # Submit
+                    try:
+                        os.write(fd, b"\r")
+                    except OSError:
+                        pass
+                    event.prevent_default()
+                    return
+            # Normal Enter — reset buffer
+            self._input_buffer = ""
+
+        # Track typed characters for input buffer
+        if event.key == "backspace":
+            if self._input_buffer:
+                self._input_buffer = self._input_buffer[:-1]
+        elif event.character and event.character.isprintable():
+            self._input_buffer += event.character
 
         char = translate_key(event)
         if char is not None:

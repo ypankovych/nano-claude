@@ -217,6 +217,7 @@ class NanoClaudeApp(App):
 
     CSS_PATH = "styles.tcss"
     TITLE = "nano-claude"
+    COMMAND_PALETTE_BINDING = "ctrl+shift+p"
 
     # Panel width state (fr units)
     tree_width = reactive(DEFAULT_TREE_WIDTH)
