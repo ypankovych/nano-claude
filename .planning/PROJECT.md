@@ -32,7 +32,10 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - ✓ Ctrl+P pin/unpin ambient context with status bar indicator and auto-injection — Phase 5
 
 ### Active
-- [ ] Toggleable terminal panel via shortcut for running commands
+- (none — all v1 requirements validated)
+
+### Recently Validated
+- ✓ Toggleable terminal panel via Ctrl+T with multi-tab shell sessions — Phase 6
 
 ### Out of Scope
 
@@ -68,4 +71,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-23 after Phase 5 completion*
+*Last updated: 2026-03-23 after Phase 6 completion (final phase)*
