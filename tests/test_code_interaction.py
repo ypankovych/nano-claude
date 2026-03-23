@@ -141,9 +141,109 @@ class TestConstants:
 
 
 class TestReservedKeys:
-    """Tests for RESERVED_KEYS containing ctrl+l."""
+    """Tests for RESERVED_KEYS containing ctrl+l and ctrl+p."""
 
     def test_ctrl_l_is_reserved(self) -> None:
         from nano_claude.terminal.widget import RESERVED_KEYS
 
         assert "ctrl+l" in RESERVED_KEYS
+
+    def test_ctrl_p_is_reserved(self) -> None:
+        from nano_claude.terminal.widget import RESERVED_KEYS
+
+        assert "ctrl+p" in RESERVED_KEYS
+
+
+class TestPinContext:
+    """Tests for pin/unpin toggle on NanoClaudeApp."""
+
+    def test_pin_stores_context(self, tmp_path: Path) -> None:
+        """Verify that a CodeContext can be stored as _pinned_context."""
+        from nano_claude.app import NanoClaudeApp
+
+        app = NanoClaudeApp.__new__(NanoClaudeApp)
+        app._pinned_context = None  # Initialize
+
+        ctx = CodeContext(
+            file_path=tmp_path / "main.py",
+            start_line=10,
+            end_line=20,
+            text="some code",
+            language="python",
+        )
+        app._pinned_context = ctx
+        assert app._pinned_context is ctx
+        assert app._pinned_context.start_line == 10
+        assert app._pinned_context.end_line == 20
+
+    def test_unpin_clears_context(self, tmp_path: Path) -> None:
+        """Setting _pinned_context to None clears the pin."""
+        from nano_claude.app import NanoClaudeApp
+
+        app = NanoClaudeApp.__new__(NanoClaudeApp)
+        ctx = CodeContext(
+            file_path=tmp_path / "main.py",
+            start_line=1,
+            end_line=5,
+            text="code",
+            language="python",
+        )
+        app._pinned_context = ctx
+        assert app._pinned_context is not None
+
+        app._pinned_context = None
+        assert app._pinned_context is None
+
+    def test_ctrl_p_is_reserved(self) -> None:
+        from nano_claude.terminal.widget import RESERVED_KEYS
+
+        assert "ctrl+p" in RESERVED_KEYS
+
+    def test_pin_context_binding_exists(self) -> None:
+        """Verify Ctrl+P binding is registered on NanoClaudeApp."""
+        from nano_claude.app import NanoClaudeApp
+
+        binding_keys = [b.key for b in NanoClaudeApp.BINDINGS]
+        assert "ctrl+p" in binding_keys
+
+    def test_action_pin_context_exists(self) -> None:
+        """Verify action_pin_context method exists."""
+        from nano_claude.app import NanoClaudeApp
+
+        assert hasattr(NanoClaudeApp, "action_pin_context")
+        assert callable(getattr(NanoClaudeApp, "action_pin_context"))
+
+
+class TestGetPinnedContextText:
+    """Tests for _get_pinned_context_text helper."""
+
+    def test_returns_none_when_not_pinned(self) -> None:
+        """_get_pinned_context_text returns None when nothing is pinned."""
+        from nano_claude.app import NanoClaudeApp
+
+        app = NanoClaudeApp.__new__(NanoClaudeApp)
+        app._pinned_context = None
+        result = app._get_pinned_context_text()
+        assert result is None
+
+    def test_returns_formatted_fence_when_pinned(self, tmp_path: Path) -> None:
+        """_get_pinned_context_text returns code fence string when context is pinned."""
+        from nano_claude.app import NanoClaudeApp
+
+        app = NanoClaudeApp.__new__(NanoClaudeApp)
+        ctx = CodeContext(
+            file_path=tmp_path / "src" / "utils.py",
+            start_line=5,
+            end_line=15,
+            text="def helper():\n    return 42",
+            language="python",
+        )
+        app._pinned_context = ctx
+
+        with patch("nano_claude.app.Path.cwd", return_value=tmp_path):
+            result = app._get_pinned_context_text()
+
+        assert result is not None
+        assert "```python" in result
+        assert "src/utils.py lines 5-15" in result
+        assert "def helper():" in result
