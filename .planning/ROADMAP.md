@@ -103,11 +103,11 @@ Plans:
   1. User can toggle a terminal panel on and off using a keyboard shortcut
   2. Terminal panel runs a full PTY-based shell supporting interactive commands (npm start, git, python scripts, etc.) with ANSI color rendering
   3. User can switch focus between the terminal panel and other panels using keyboard shortcuts
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — TerminalPanel widget with ContentSwitcher tab management, minimize/restore, RESERVED_KEYS update, terminal CSS
+- [ ] 06-02-PLAN.md — App layout restructure, Ctrl+T/N/W bindings and actions, focus integration, shutdown cleanup, tests
 
 ## Progress
 
@@ -122,4 +122,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Claude Code Integration | 0/2 | Planning complete | - |
 | 4. Change Detection and Auto-Jump | 0/2 | Planning complete | - |
 | 5. Code-to-Claude Interaction | 0/2 | Planning complete | - |
-| 6. Terminal Panel | 0/2 | Not started | - |
+| 6. Terminal Panel | 0/2 | Planning complete | - |
