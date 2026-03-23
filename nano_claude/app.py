@@ -265,6 +265,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+f", "toggle_search", "Find", id="editor.find", priority=True, show=True),
         # Jump to change
         Binding("ctrl+j", "jump_to_change", "Jump to Change", id="jump.change", priority=True, show=True),
+        # Diff view toggle
+        Binding("ctrl+d", "toggle_diff", "Diff View", id="diff.toggle", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -596,6 +598,14 @@ class NanoClaudeApp(App):
                 all_changed = sorted(change.added_lines + change.modified_lines)
                 if all_changed:
                     editor.scroll_to_line(all_changed[0])
+        except Exception:
+            pass
+
+    def action_toggle_diff(self) -> None:
+        """Toggle diff view in the editor panel (Ctrl+D)."""
+        try:
+            editor = self.query_one(EditorPanel)
+            editor.action_toggle_diff()
         except Exception:
             pass
 

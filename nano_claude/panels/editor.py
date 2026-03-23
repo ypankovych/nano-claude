@@ -15,6 +15,7 @@ from nano_claude.models.file_buffer import (
 )
 from nano_claude.panels.base import BasePanel
 from nano_claude.widgets.changed_files_overlay import ChangedFilesOverlay
+from nano_claude.widgets.diff_view import DiffView
 from nano_claude.widgets.search_overlay import SearchOverlay
 from nano_claude.widgets.searchable_text_area import SearchableTextArea
 
@@ -67,6 +68,8 @@ class EditorPanel(BasePanel):
         self._last_search_query: str = ""
         # Change highlight state per file
         self._file_change_highlights: dict[Path, tuple[list[int], list[int]]] = {}
+        # Diff view toggle state
+        self._diff_mode: bool = False
 
     def compose(self):
         self.panel_title = "Editor"
@@ -81,12 +84,15 @@ class EditorPanel(BasePanel):
             tab_behavior="indent",
             id="code-editor",
         )
+        yield DiffView(id="diff-view")
 
     def on_mount(self) -> None:
-        """Store reference to SearchableTextArea and show README or welcome."""
+        """Store reference to SearchableTextArea and DiffView, show README or welcome."""
         from nano_claude.config.settings import WELCOME_GREETING
 
         self._text_area = self.query_one("#code-editor", SearchableTextArea)
+        self._diff_view = self.query_one("#diff-view", DiffView)
+        self._diff_view.display = False
 
         # Auto-open README.md if it exists, otherwise show welcome greeting
         readme_path = Path.cwd() / "README.md"
@@ -102,6 +108,12 @@ class EditorPanel(BasePanel):
         Checks for binary and oversized files. Saves current buffer state
         before switching. Loads content, sets language, and detects indentation.
         """
+        # Exit diff mode if active
+        if self._diff_mode:
+            self._diff_view.display = False
+            self._text_area.display = True
+            self._diff_mode = False
+
         # Check file size
         try:
             file_size = path.stat().st_size
@@ -216,6 +228,34 @@ class EditorPanel(BasePanel):
             self._text_area.scroll_cursor_visible()
         except Exception:
             pass
+
+    def action_toggle_diff(self) -> None:
+        """Toggle between normal editor and diff view."""
+        if self._diff_mode:
+            # Return to normal editing
+            self._diff_view.display = False
+            self._text_area.display = True
+            self._diff_mode = False
+            self._update_title()
+        else:
+            # Show diff view
+            if self.current_file is None:
+                self.notify("No file open", severity="warning")
+                return
+            # Get the app's change tracker
+            app = self.app
+            if not hasattr(app, "_change_tracker"):
+                self.notify("No changes tracked", severity="information")
+                return
+            diff_text = app._change_tracker.get_unified_diff(self.current_file)
+            if not diff_text:
+                self.notify("No changes for this file", severity="information")
+                return
+            self._diff_view.set_diff(diff_text)
+            self._text_area.display = False
+            self._diff_view.display = True
+            self._diff_mode = True
+            self.panel_title = f"Diff: {self.current_file.name}"
 
     def reload_from_disk(self, path: Path) -> None:
         """Reload a file from disk, preserving cursor position.

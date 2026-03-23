@@ -330,3 +330,91 @@ class TestDiffView:
         assert isinstance(renderable, Text)
         assert "truncated" in renderable.plain.lower()
         assert str(MAX_DIFF_LINES) in renderable.plain
+
+
+# ---------------------------------------------------------------------------
+# Diff toggle integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestDiffToggle:
+    """Verify Ctrl+D toggle between editor and diff view."""
+
+    def test_editor_has_action_toggle_diff(self):
+        """EditorPanel has action_toggle_diff method."""
+        from nano_claude.panels.editor import EditorPanel
+
+        assert hasattr(EditorPanel, "action_toggle_diff")
+        assert callable(getattr(EditorPanel, "action_toggle_diff"))
+
+    def test_editor_has_diff_mode_state(self):
+        """EditorPanel.__init__ sets _diff_mode to False."""
+        import inspect
+        from nano_claude.panels.editor import EditorPanel
+
+        source = inspect.getsource(EditorPanel.__init__)
+        assert "_diff_mode" in source
+
+    def test_editor_composes_diff_view(self):
+        """EditorPanel.compose yields a DiffView widget."""
+        import inspect
+        from nano_claude.panels.editor import EditorPanel
+
+        source = inspect.getsource(EditorPanel.compose)
+        assert "DiffView" in source
+        assert "diff-view" in source
+
+    def test_editor_imports_diff_view(self):
+        """EditorPanel module imports DiffView."""
+        from nano_claude.panels.editor import EditorPanel
+        from nano_claude.widgets.diff_view import DiffView
+
+        # Verify the import exists in the module
+        import nano_claude.panels.editor as editor_mod
+
+        assert hasattr(editor_mod, "DiffView") or "DiffView" in dir(editor_mod)
+
+    def test_app_has_ctrl_d_binding(self):
+        """App BINDINGS list contains ctrl+d binding."""
+        from textual.binding import Binding
+
+        from nano_claude.app import NanoClaudeApp
+
+        app = NanoClaudeApp()
+        d_bindings = [
+            b
+            for b in app.BINDINGS
+            if isinstance(b, Binding) and b.key == "ctrl+d"
+        ]
+        assert len(d_bindings) >= 1, "Expected a ctrl+d binding"
+
+    def test_app_has_action_toggle_diff(self):
+        """NanoClaudeApp has action_toggle_diff method."""
+        from nano_claude.app import NanoClaudeApp
+
+        assert hasattr(NanoClaudeApp, "action_toggle_diff")
+        assert callable(getattr(NanoClaudeApp, "action_toggle_diff"))
+
+    def test_diff_mode_exits_on_file_switch(self):
+        """EditorPanel.open_file exits diff mode if active."""
+        import inspect
+        from nano_claude.panels.editor import EditorPanel
+
+        source = inspect.getsource(EditorPanel.open_file)
+        assert "_diff_mode" in source
+        assert "_diff_view" in source
+
+    def test_toggle_diff_uses_change_tracker(self):
+        """action_toggle_diff references change_tracker and get_unified_diff."""
+        import inspect
+        from nano_claude.panels.editor import EditorPanel
+
+        source = inspect.getsource(EditorPanel.action_toggle_diff)
+        assert "change_tracker" in source
+        assert "get_unified_diff" in source
+
+    def test_styles_has_diff_view_rule(self):
+        """styles.tcss contains #diff-view CSS rule."""
+        css_path = Path(__file__).parent.parent / "nano_claude" / "styles.tcss"
+        css_content = css_path.read_text()
+        assert "#diff-view" in css_content

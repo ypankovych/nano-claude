@@ -39,3 +39,9 @@
     width: 1fr;
     height: 1fr;
 }
+
+#diff-view {
+    width: 1fr;
+    height: 1fr;
+    background: $surface;
+}
