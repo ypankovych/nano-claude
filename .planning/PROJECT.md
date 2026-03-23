@@ -25,10 +25,11 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - ✓ Claude status indicator (thinking/writing/idle) in status bar — Phase 3
 - ✓ Token usage and cost display in status bar — Phase 3
 - ✓ Graceful degradation when claude CLI not installed — Phase 3
+- ✓ Auto-jump to edited file with change highlights and notifications — Phase 4
+- ✓ Unified inline diff view with Ctrl+D toggle — Phase 4
+- ✓ Auto-reload of open files with conflict prompt for unsaved edits — Phase 4
 
 ### Active
-- [ ] Auto-jump to edited file with changed lines highlighted when Claude makes edits
-- [ ] Shortcut to toggle full git-style diff view of Claude's changes
 - [ ] Code selection visible to Claude as ambient context
 - [ ] Explicit "send selection to Claude" action with prompt
 - [ ] Toggleable terminal panel via shortcut for running commands
@@ -67,4 +68,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-23 after Phase 3 completion*
+*Last updated: 2026-03-23 after Phase 4 completion*
