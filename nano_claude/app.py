@@ -23,6 +23,7 @@ from nano_claude.models.code_context import CodeContext, write_to_pty_bracketed
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
+from nano_claude.panels.terminal import TerminalPanel
 from nano_claude.services.change_tracker import ChangeTracker
 from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
 from nano_claude.terminal.status_parser import ClaudeState, CostUpdate, StatusUpdate
@@ -277,6 +278,10 @@ class NanoClaudeApp(App):
         # Send selection to Claude
         Binding("ctrl+l", "send_to_claude", "Send to Claude", id="interact.send", priority=True, show=True),
         Binding("ctrl+p", "pin_context", "Pin Context", id="interact.pin", priority=True, show=True),
+        # Terminal panel
+        Binding("ctrl+t", "toggle_terminal", "Terminal", id="terminal.toggle", priority=True, show=True),
+        Binding("ctrl+n", "new_terminal_tab", "New Tab", id="terminal.new_tab", priority=True, show=False),
+        Binding("ctrl+w", "close_terminal_tab", "Close Tab", id="terminal.close_tab", priority=True, show=False),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -285,10 +290,12 @@ class NanoClaudeApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Horizontal(id="main-panels"):
-            yield FileTreePanel(id="file-tree")
-            yield EditorPanel(id="editor")
-            yield ChatPanel(id="chat")
+        with Vertical(id="app-layout"):
+            with Horizontal(id="main-panels"):
+                yield FileTreePanel(id="file-tree")
+                yield EditorPanel(id="editor")
+                yield ChatPanel(id="chat")
+            yield TerminalPanel(id="terminal-panel")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -316,10 +323,13 @@ class NanoClaudeApp(App):
             pass  # Claude not available; callback remains None
 
     def action_focus_panel(self, panel_id: str) -> None:
-        """Focus a specific panel by its DOM id. Does nothing if panel is hidden."""
+        """Focus a specific panel by its DOM id. Does nothing if panel is hidden or minimized."""
         try:
             panel = self.query_one(f"#{panel_id}")
             if panel.has_class("hidden"):
+                return
+            # Check for minimized terminal panel
+            if isinstance(panel, TerminalPanel) and panel.is_minimized:
                 return
             # Find the first focusable child within the panel
             for widget in panel.query("*"):
@@ -757,11 +767,71 @@ class NanoClaudeApp(App):
         except Exception:
             pass
 
+    def action_toggle_terminal(self) -> None:
+        """Toggle terminal: hidden->show+focus, visible-unfocused->focus, focused->minimize."""
+        try:
+            panel = self.query_one("#terminal-panel", TerminalPanel)
+        except Exception:
+            return
+
+        if panel.is_minimized:
+            # Hidden/minimized -> show + focus
+            panel.restore()
+            self._focus_terminal()
+        elif not self._panel_has_focus(panel):
+            # Visible but not focused -> just focus
+            self._focus_terminal()
+        else:
+            # Focused -> minimize (move focus away first to avoid focus-lost-to-nowhere)
+            self.action_focus_panel("editor")
+            panel.minimize()
+
+    def _focus_terminal(self) -> None:
+        """Focus the active terminal widget in the terminal panel."""
+        try:
+            panel = self.query_one("#terminal-panel", TerminalPanel)
+            terminal = panel.get_active_terminal()
+            if terminal is not None:
+                terminal.focus()
+        except Exception:
+            pass
+
+    def action_new_terminal_tab(self) -> None:
+        """Create a new terminal tab (only when terminal is focused)."""
+        try:
+            panel = self.query_one("#terminal-panel", TerminalPanel)
+        except Exception:
+            return
+        if not self._panel_has_focus(panel):
+            return  # Not focused on terminal -- ignore
+        panel.add_tab()
+
+    def action_close_terminal_tab(self) -> None:
+        """Close the active terminal tab (only when terminal is focused)."""
+        try:
+            panel = self.query_one("#terminal-panel", TerminalPanel)
+        except Exception:
+            return
+        if not self._panel_has_focus(panel):
+            return  # Not focused on terminal -- ignore
+        panel.close_active_tab()
+        # If panel just minimized (last tab closed), focus editor
+        if panel.is_minimized:
+            self.action_focus_panel("editor")
+
     def _stop_claude_pty(self) -> None:
         """Stop the Claude PTY subprocess if running."""
         try:
             terminal = self.query_one("#claude-terminal", TerminalWidget)
             terminal.stop_pty()
+        except Exception:
+            pass
+
+    def _stop_shell_ptys(self) -> None:
+        """Stop all shell PTY subprocesses in the terminal panel."""
+        try:
+            panel = self.query_one("#terminal-panel", TerminalPanel)
+            panel.stop_all_ptys()
         except Exception:
             pass
 
@@ -794,6 +864,7 @@ class NanoClaudeApp(App):
     def _do_final_exit(self) -> None:
         """Called by ShutdownScreen after it renders."""
         self._stop_claude_pty()
+        self._stop_shell_ptys()
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
         for worker in self.workers:
