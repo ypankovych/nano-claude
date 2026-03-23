@@ -459,17 +459,23 @@ class NanoClaudeApp(App):
         self._sync_modified_paths()
 
     def on_text_area_changed(self, event) -> None:
-        """Sync modified file indicators and clear stale change tracking."""
+        """Sync modified file indicators and clear stale change tracking.
+
+        Skip change-tracker cleanup during programmatic reloads (_reloading
+        flag) — only clear on actual user edits.
+        """
+        try:
+            editor = self.query_one(EditorPanel)
+            if editor._reloading:
+                return
+        except Exception:
+            return
         self._sync_modified_paths()
         # When user edits a file, clear the pending change and update
         # the snapshot so the next Claude edit diffs against user's version
-        try:
-            editor = self.query_one(EditorPanel)
-            if editor.current_file is not None:
-                self._change_tracker.clear_change(editor.current_file)
-                self._change_tracker.update_snapshot(editor.current_file)
-        except Exception:
-            pass
+        if editor.current_file is not None:
+            self._change_tracker.clear_change(editor.current_file)
+            self._change_tracker.update_snapshot(editor.current_file)
 
     def _sync_modified_paths(self) -> None:
         """Update the file tree's modified path indicators from the editor's buffers."""

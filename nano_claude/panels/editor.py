@@ -66,6 +66,8 @@ class EditorPanel(BasePanel):
         self._search_matches: list[tuple[int, int]] = []
         self._current_match_index: int = -1
         self._last_search_query: str = ""
+        # Suppress change-clear during programmatic reloads (not user edits)
+        self._reloading: bool = False
         # Change highlight state per file
         self._file_change_highlights: dict[Path, tuple[list[int], list[int]]] = {}
         # Diff view toggle state
@@ -261,7 +263,8 @@ class EditorPanel(BasePanel):
         """Reload a file from disk, preserving cursor position.
 
         Used for auto-reload when an open file changes externally
-        and the buffer has no unsaved edits.
+        and the buffer has no unsaved edits. Sets _reloading flag to
+        prevent on_text_area_changed from clearing change highlights.
         """
         if path not in self._buffer_manager._buffers:
             return
@@ -281,7 +284,9 @@ class EditorPanel(BasePanel):
         buf.current_content = new_content
 
         # If this is the currently displayed file, reload the TextArea
+        # Flag _reloading so on_text_area_changed doesn't clear highlights
         if path == self.current_file:
+            self._reloading = True
             self._text_area.load_text(new_content)
             # Restore cursor, clamping to new file length
             total_lines = self._text_area.document.line_count
@@ -291,6 +296,7 @@ class EditorPanel(BasePanel):
             col = min(old_cursor[1], len(line_text))
             self._text_area.cursor_location = (row, col)
             self._update_title()
+            self._reloading = False
 
     def show_changed_files(self, paths: list[Path]) -> None:
         """Show the changed files overlay with a list of file paths."""
@@ -395,9 +401,11 @@ class EditorPanel(BasePanel):
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         """Update buffer and title when TextArea content changes.
 
-        Also clears change highlights when user starts editing, since
-        the user's edits make the old diff markers stale.
+        Clears change highlights only on USER edits (not programmatic reloads).
+        The _reloading flag is set during reload_from_disk to suppress this.
         """
+        if self._reloading:
+            return
         if self.current_file is not None:
             self._buffer_manager.update_content(
                 self.current_file, self._text_area.text
