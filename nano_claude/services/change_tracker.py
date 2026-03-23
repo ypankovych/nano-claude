@@ -75,23 +75,31 @@ class ChangeTracker:
             return None
 
         if path not in self._snapshots:
-            # No pre-edit snapshot — report all lines as added
+            # No pre-edit snapshot — try to get "before" from git HEAD
+            old_content = self._git_file_content(path)
             try:
                 new_content = path.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 return None
-            new_lines = new_content.splitlines()
-            change = FileChange(
-                path=path,
-                added_lines=list(range(len(new_lines))),
-                modified_lines=[],
-                deleted_count=0,
-                old_content="",
-                new_content=new_content,
-            )
-            self._pending_changes[path] = change
-            self._snapshots[path] = new_content
-            return change
+
+            if old_content is not None:
+                # Have git history — use it as the "before" snapshot
+                self._snapshots[path] = old_content
+                # Fall through to the normal diff logic below
+            else:
+                # Truly new file (untracked) — all lines are added
+                new_lines = new_content.splitlines()
+                change = FileChange(
+                    path=path,
+                    added_lines=list(range(len(new_lines))),
+                    modified_lines=[],
+                    deleted_count=0,
+                    old_content="",
+                    new_content=new_content,
+                )
+                self._pending_changes[path] = change
+                self._snapshots[path] = new_content
+                return change
 
         try:
             new_content = path.read_text(encoding="utf-8", errors="replace")
@@ -184,3 +192,41 @@ class ChangeTracker:
         """Clear all snapshots and pending changes."""
         self._snapshots.clear()
         self._pending_changes.clear()
+
+    @staticmethod
+    def _git_file_content(path: Path) -> str | None:
+        """Try to get file content from git HEAD.
+
+        Returns the content of the file at HEAD, or None if:
+        - Not in a git repo
+        - File is untracked (new)
+        - git command fails
+        """
+        import subprocess
+
+        try:
+            # Get relative path from repo root
+            repo_root = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, cwd=path.parent,
+                timeout=5,
+            )
+            if repo_root.returncode != 0:
+                return None
+
+            root = Path(repo_root.stdout.strip())
+            try:
+                rel = path.relative_to(root)
+            except ValueError:
+                return None
+
+            result = subprocess.run(
+                ["git", "show", f"HEAD:{rel}"],
+                capture_output=True, text=True, cwd=root,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return result.stdout
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
+        return None
