@@ -66,8 +66,9 @@ class EditorPanel(BasePanel):
         self._search_matches: list[tuple[int, int]] = []
         self._current_match_index: int = -1
         self._last_search_query: str = ""
-        # Suppress change-clear during programmatic reloads (not user edits)
-        self._reloading: bool = False
+        # Count of pending reloads — suppresses change-clear in on_text_area_changed.
+        # Incremented by reload_from_disk, decremented by handlers.
+        self._reload_count: int = 0
         # Change highlight state per file
         self._file_change_highlights: dict[Path, tuple[list[int], list[int]]] = {}
         # Diff view toggle state
@@ -291,7 +292,7 @@ class EditorPanel(BasePanel):
         # If this is the currently displayed file, reload the TextArea
         # Flag _reloading so on_text_area_changed doesn't clear highlights
         if path == self.current_file:
-            self._reloading = True
+            self._reload_count += 1
             self._text_area.load_text(new_content)
             # Restore cursor, clamping to new file length
             total_lines = self._text_area.document.line_count
@@ -411,8 +412,8 @@ class EditorPanel(BasePanel):
         Clears change highlights only on USER edits (not programmatic reloads).
         The _reloading flag is set by reload_from_disk and consumed here.
         """
-        if self._reloading:
-            self._reloading = False  # Consume the flag
+        if self._reload_count > 0:
+            self._reload_count -= 1
             return
         if self.current_file is not None:
             self._buffer_manager.update_content(

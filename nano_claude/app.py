@@ -233,6 +233,7 @@ class NanoClaudeApp(App):
     # Change detection state
     _last_changed_path: Path | None = None
     _last_changed_paths: list[Path] = []
+    _last_changed_lines: dict[Path, int] = {}  # path -> first changed line
 
     BINDINGS = [
         # Panel focus -- Ctrl+letter as primary (universally supported across terminals)
@@ -466,8 +467,8 @@ class NanoClaudeApp(App):
         """
         try:
             editor = self.query_one(EditorPanel)
-            if editor._reloading:
-                return  # Flag consumed by editor's own handler
+            if editor._reload_count > 0:
+                return  # Reload in progress — don't clear change state
         except Exception:
             return
         self._sync_modified_paths()
@@ -539,12 +540,16 @@ class NanoClaudeApp(App):
                         # Silent auto-reload
                         editor.reload_from_disk(path)
 
-                # Track changed paths for notification
+                # Track changed paths for notification and jump
                 if file_change is not None:
                     changed_paths.append(path)
                     editor.set_change_highlights(
                         path, file_change.added_lines, file_change.modified_lines
                     )
+                    # Store first changed line for jump target
+                    all_lines = sorted(file_change.added_lines + file_change.modified_lines)
+                    if all_lines:
+                        self._last_changed_lines[path] = all_lines[0]
 
         # Show notification
         if len(changed_paths) == 1:
@@ -607,15 +612,10 @@ class NanoClaudeApp(App):
 
         try:
             editor = self.query_one(EditorPanel)
-            # Ensure snapshot before opening
-            self._change_tracker.ensure_snapshot(path)
             editor.open_file(path)
-            # Scroll to first changed line
-            change = self._change_tracker.get_pending_change(path)
-            if change is not None:
-                all_changed = sorted(change.added_lines + change.modified_lines)
-                if all_changed:
-                    editor.scroll_to_line(all_changed[0])
+            # Scroll to first changed line (stored during change detection)
+            first_line = self._last_changed_lines.get(path, 0)
+            editor.scroll_to_line(first_line)
         except Exception:
             pass
 
