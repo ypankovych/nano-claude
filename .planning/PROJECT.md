@@ -28,10 +28,10 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - ✓ Auto-jump to edited file with change highlights and notifications — Phase 4
 - ✓ Unified inline diff view with Ctrl+D toggle — Phase 4
 - ✓ Auto-reload of open files with conflict prompt for unsaved edits — Phase 4
+- ✓ Ctrl+L send code selection to Claude with markdown code fence formatting — Phase 5
+- ✓ Ctrl+P pin/unpin ambient context with status bar indicator and auto-injection — Phase 5
 
 ### Active
-- [ ] Code selection visible to Claude as ambient context
-- [ ] Explicit "send selection to Claude" action with prompt
 - [ ] Toggleable terminal panel via shortcut for running commands
 
 ### Out of Scope
@@ -68,4 +68,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-23 after Phase 4 completion (with bug fixes)*
+*Last updated: 2026-03-23 after Phase 5 completion*
