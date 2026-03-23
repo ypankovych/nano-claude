@@ -527,8 +527,16 @@ class NanoClaudeApp(App):
                 if not path.is_file():
                     continue
 
-                # Compute diff if we have a snapshot
-                file_change = self._change_tracker.compute_change(path)
+                # Get "before" content from BufferManager if file is open
+                before_content = None
+                if path in editor._buffer_manager._buffers:
+                    buf = editor._buffer_manager._buffers[path]
+                    before_content = buf.original_content
+
+                # Compute diff using buffer content as "before"
+                file_change = self._change_tracker.compute_change(
+                    path, before_content=before_content
+                )
 
                 # Auto-reload open buffers
                 if path in editor._buffer_manager._buffers:

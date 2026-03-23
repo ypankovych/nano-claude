@@ -1,11 +1,6 @@
 """ChangeTracker service for computing line-level diffs when files change on disk.
 
-Maintains before-snapshots of tracked files and computes added/modified/deleted
-line ranges using difflib.SequenceMatcher opcodes. Provides unified diff output
-for display in a diff view.
-
-All paths are resolved to absolute form for consistent comparison —
-DirectoryTree uses one form, watchfiles uses another.
+All paths are resolved to absolute form for consistent comparison.
 """
 
 from __future__ import annotations
@@ -17,7 +12,7 @@ from pathlib import Path
 
 @dataclass
 class FileChange:
-    """Result of computing a diff between a file's snapshot and its current content."""
+    """Result of computing a diff between before/after content."""
 
     path: Path
     added_lines: list[int] = field(default_factory=list)
@@ -28,7 +23,12 @@ class FileChange:
 
 
 class ChangeTracker:
-    """Tracks file snapshots and computes line-level diffs."""
+    """Tracks file snapshots and computes line-level diffs.
+
+    Snapshots come from two sources:
+    1. ensure_snapshot() — called when user opens a file
+    2. set_snapshot() — called with BufferManager content for open files
+    """
 
     def __init__(self) -> None:
         self._snapshots: dict[Path, str] = {}
@@ -36,7 +36,7 @@ class ChangeTracker:
         self._user_saved: set[Path] = set()
 
     def ensure_snapshot(self, path: Path) -> None:
-        """Read file content and store as snapshot if not already tracked."""
+        """Read file from disk and store as snapshot if not already tracked."""
         path = path.resolve()
         if path in self._snapshots:
             return
@@ -45,6 +45,11 @@ class ChangeTracker:
             self._snapshots[path] = content
         except OSError:
             pass
+
+    def set_snapshot(self, path: Path, content: str) -> None:
+        """Set snapshot content directly (e.g., from BufferManager)."""
+        path = path.resolve()
+        self._snapshots[path] = content
 
     def mark_user_saved(self, path: Path) -> None:
         """Mark a file as just saved by the user — ignore next filesystem event."""
@@ -56,11 +61,18 @@ class ChangeTracker:
         except OSError:
             pass
 
-    def compute_change(self, path: Path) -> FileChange | None:
-        """Compare current file on disk against stored snapshot.
+    def compute_change(
+        self, path: Path, before_content: str | None = None
+    ) -> FileChange | None:
+        """Compare current file on disk against snapshot or provided before_content.
 
-        Returns None if file was user-saved or content unchanged.
-        For files without a prior snapshot, reports all lines as added.
+        Args:
+            path: File that changed.
+            before_content: If provided, use this as the "before" instead of
+                the stored snapshot. This is useful when the caller has the
+                BufferManager's original_content for open files.
+
+        Returns None if user-saved, no before content available, or unchanged.
         """
         path = path.resolve()
 
@@ -74,54 +86,36 @@ class ChangeTracker:
                 pass
             return None
 
-        if path not in self._snapshots:
-            # No pre-edit snapshot — try to get "before" from git HEAD
-            old_content = self._git_file_content(path)
+        # Determine "before" content
+        old_content = before_content or self._snapshots.get(path)
+        if old_content is None:
+            # No snapshot at all — store current content for next time
             try:
-                new_content = path.read_text(encoding="utf-8", errors="replace")
+                content = path.read_text(encoding="utf-8", errors="replace")
+                self._snapshots[path] = content
             except OSError:
-                return None
+                pass
+            return None
 
-            if old_content is not None:
-                # Have git history — use it as the "before" snapshot
-                self._snapshots[path] = old_content
-                # Fall through to the normal diff logic below
-            else:
-                # Truly new file (untracked) — all lines are added
-                new_lines = new_content.splitlines()
-                change = FileChange(
-                    path=path,
-                    added_lines=list(range(len(new_lines))),
-                    modified_lines=[],
-                    deleted_count=0,
-                    old_content="",
-                    new_content=new_content,
-                )
-                self._pending_changes[path] = change
-                self._snapshots[path] = new_content
-                return change
-
+        # Read current file
         try:
             new_content = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             return None
 
-        old_content = self._snapshots[path]
-
         if old_content == new_content:
             return None
 
+        # Compute line-level diff
         old_lines = old_content.splitlines(keepends=True)
         new_lines = new_content.splitlines(keepends=True)
-
         matcher = difflib.SequenceMatcher(None, old_lines, new_lines)
-        opcodes = matcher.get_opcodes()
 
         added_lines: list[int] = []
         modified_lines: list[int] = []
         deleted_count: int = 0
 
-        for tag, i1, i2, j1, j2 in opcodes:
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
             if tag == "insert":
                 added_lines.extend(range(j1, j2))
             elif tag == "replace":
@@ -141,7 +135,6 @@ class ChangeTracker:
             old_content=old_content,
             new_content=new_content,
         )
-
         self._pending_changes[path] = change
         return change
 
@@ -155,7 +148,7 @@ class ChangeTracker:
             pass
 
     def get_unified_diff(self, path: Path) -> str:
-        """Return a standard unified diff string for a pending change."""
+        """Return unified diff string for a pending change."""
         path = path.resolve()
         change = self._pending_changes.get(path)
         if change is None:
@@ -163,25 +156,16 @@ class ChangeTracker:
 
         old_lines = change.old_content.splitlines(keepends=True)
         new_lines = change.new_content.splitlines(keepends=True)
-
         diff = difflib.unified_diff(
-            old_lines,
-            new_lines,
-            fromfile=f"a/{path.name}",
-            tofile=f"b/{path.name}",
-            n=3,
+            old_lines, new_lines,
+            fromfile=f"a/{path.name}", tofile=f"b/{path.name}", n=3,
         )
-
         return "".join(diff)
 
     def get_pending_change(self, path: Path) -> FileChange | None:
         """Return the pending change for a path, or None."""
         path = path.resolve()
         return self._pending_changes.get(path)
-
-    def get_all_pending_paths(self) -> list[Path]:
-        """Return all paths with pending changes."""
-        return list(self._pending_changes.keys())
 
     def clear_change(self, path: Path) -> None:
         """Remove pending change for a path."""
@@ -192,41 +176,3 @@ class ChangeTracker:
         """Clear all snapshots and pending changes."""
         self._snapshots.clear()
         self._pending_changes.clear()
-
-    @staticmethod
-    def _git_file_content(path: Path) -> str | None:
-        """Try to get file content from git HEAD.
-
-        Returns the content of the file at HEAD, or None if:
-        - Not in a git repo
-        - File is untracked (new)
-        - git command fails
-        """
-        import subprocess
-
-        try:
-            # Get relative path from repo root
-            repo_root = subprocess.run(
-                ["git", "rev-parse", "--show-toplevel"],
-                capture_output=True, text=True, cwd=path.parent,
-                timeout=5,
-            )
-            if repo_root.returncode != 0:
-                return None
-
-            root = Path(repo_root.stdout.strip())
-            try:
-                rel = path.relative_to(root)
-            except ValueError:
-                return None
-
-            result = subprocess.run(
-                ["git", "show", f"HEAD:{rel}"],
-                capture_output=True, text=True, cwd=root,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                return result.stdout
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-            pass
-        return None

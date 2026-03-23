@@ -113,15 +113,16 @@ class SearchableTextArea(TextArea):
         scroll_x, scroll_y = self.scroll_offset
         doc_row = scroll_y + y
 
-        # Step 2: Apply change highlight (full-line background tint)
+        # Step 2: Apply change highlight (content area only, skip gutter)
         if self._change_highlights_active:
+            gutter = self.gutter_width if self.show_line_numbers else 0
             if doc_row in self._added_lines:
                 strip = self._apply_style_to_range(
-                    strip, 0, strip.cell_length, self._ADDED_LINE_STYLE
+                    strip, gutter, strip.cell_length, self._ADDED_LINE_STYLE
                 )
             elif doc_row in self._modified_lines:
                 strip = self._apply_style_to_range(
-                    strip, 0, strip.cell_length, self._MODIFIED_LINE_STYLE
+                    strip, gutter, strip.cell_length, self._MODIFIED_LINE_STYLE
                 )
 
         # Step 3: Apply search highlights (character-range, on top)
