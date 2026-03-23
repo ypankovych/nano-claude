@@ -89,10 +89,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User selects code in the editor, presses a keyboard shortcut, types a prompt, and Claude receives both the selection (with file path and line numbers) and the prompt
   2. Claude automatically sees the user's current code selection as ambient context without the user explicitly sending it
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md — CodeContext model, PTY bracketed-paste write utility, EditorPanel selection extraction, Ctrl+L send-to-Claude wiring
+- [ ] 05-02-PLAN.md — Ctrl+P pin/unpin ambient context, Enter interception for context injection, status bar pin indicator, Claude idle guard
 
 ### Phase 6: Terminal Panel
 **Goal**: User can run shell commands without leaving the TUI
@@ -120,5 +121,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. File Tree and Code Editor | 0/3 | Planning complete | - |
 | 3. Claude Code Integration | 0/2 | Planning complete | - |
 | 4. Change Detection and Auto-Jump | 0/2 | Planning complete | - |
-| 5. Code-to-Claude Interaction | 0/1 | Not started | - |
+| 5. Code-to-Claude Interaction | 0/2 | Planning complete | - |
 | 6. Terminal Panel | 0/2 | Not started | - |
