@@ -547,12 +547,10 @@ class NanoClaudeApp(App):
                     else:
                         editor.reload_from_disk(path)
 
-                # Always track changed paths for notification and jump
-                changed_paths.append(path)
-                self._last_changed_path = path
-
-                # Apply highlights + jump target if we have diff data
+                # Track changed paths for notification and jump (skip user saves)
                 if file_change is not None:
+                    changed_paths.append(path)
+                    self._last_changed_path = path
                     editor.set_change_highlights(
                         path, file_change.added_lines, file_change.modified_lines
                     )
