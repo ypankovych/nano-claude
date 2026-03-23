@@ -21,10 +21,12 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 - ✓ File editing with undo/redo, save, and unsaved change tracking — Phase 2
 - ✓ In-editor search with multi-match highlighting — Phase 2
 - ✓ Filesystem watcher for real-time tree updates — Phase 2
+- ✓ Embedded Claude Code CLI as PTY in the chat panel — Phase 3
+- ✓ Claude status indicator (thinking/writing/idle) in status bar — Phase 3
+- ✓ Token usage and cost display in status bar — Phase 3
+- ✓ Graceful degradation when claude CLI not installed — Phase 3
 
 ### Active
-
-- [ ] Embedded Claude Code CLI running as a subprocess in the chat panel
 - [ ] Auto-jump to edited file with changed lines highlighted when Claude makes edits
 - [ ] Shortcut to toggle full git-style diff view of Claude's changes
 - [ ] Code selection visible to Claude as ambient context
@@ -65,4 +67,4 @@ Eliminate context switching between Claude Code and your editor — see Claude's
 | Textual 8.1.1 with fr-unit CSS layout | Automatic redistribution on panel toggle, responsive resize | ✓ Good |
 
 ---
-*Last updated: 2026-03-22 after Phase 2 completion*
+*Last updated: 2026-03-23 after Phase 3 completion*
