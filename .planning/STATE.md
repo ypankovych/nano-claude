@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_plan: 2 of 2
-status: unknown
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-23T16:31:10.025Z"
+status: phase-complete
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-23T16:38:08Z"
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 05 (code-to-claude-interaction) — EXECUTING
-Current Plan: 2 of 2
+Phase: 05 (code-to-claude-interaction) — COMPLETE
+Current Plan: 2 of 2 (all complete)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Current Plan: 2 of 2
 | Phase 04 P01 | 8min | 2 tasks | 9 files |
 | Phase 04 P02 | 5min | 2 tasks | 6 files |
 | Phase 05 P01 | 7min | 2 tasks | 5 files |
+| Phase 05 P02 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Extract selection BEFORE focus switch to chat panel (selection may clear on blur)
 - [Phase 05]: Bracketed paste wrapping prevents terminal auto-indent on multi-line PTY injection
 - [Phase 05]: 4096-byte chunks for PTY writes to avoid buffer overflow
+- [Phase 05]: Callback pattern for widget communication (_get_pinned_context callable) keeps terminal widget Textual-independent
+- [Phase 05]: ClaudeState.IDLE guard prevents ambient context injection while Claude is processing
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T16:31:10.024Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-23T16:38:08Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
