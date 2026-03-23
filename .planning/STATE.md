@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
+current_plan: 2 of 2
 status: unknown
-stopped_at: Phase 4 execution complete with bug fixes
-last_updated: "2026-03-23T15:03:17.651Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-23T16:31:10.025Z"
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Eliminate context switching between Claude Code and your editor -- see Claude's changes the moment they happen, and let Claude see what you're looking at.
-**Current focus:** Phase 04 — change-detection-and-auto-jump
+**Current focus:** Phase 05 — code-to-claude-interaction
 
 ## Current Position
 
-Phase: 04 (change-detection-and-auto-jump) — COMPLETE
-Plan: 2 of 2 (DONE)
+Phase: 05 (code-to-claude-interaction) — EXECUTING
+Current Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -54,6 +55,7 @@ Plan: 2 of 2 (DONE)
 | Phase 03 P01 | 5min | 2 tasks | 11 files |
 | Phase 04 P01 | 8min | 2 tasks | 9 files |
 | Phase 04 P02 | 5min | 2 tasks | 6 files |
+| Phase 05 P01 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,6 +94,9 @@ Recent decisions affecting current work:
 - [Phase 04-01]: ExternalChangeConflictScreen follows UnsavedChangesScreen inline CSS pattern
 - [Phase 04]: DiffView stores renderable internally with _try_update for unmounted widget testing
 - [Phase 04]: Diff mode exits automatically when switching files via open_file
+- [Phase 05]: Extract selection BEFORE focus switch to chat panel (selection may clear on blur)
+- [Phase 05]: Bracketed paste wrapping prevents terminal auto-indent on multi-line PTY injection
+- [Phase 05]: 4096-byte chunks for PTY writes to avoid buffer overflow
 
 ### Pending Todos
 
@@ -105,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T15:02:52.390Z
-Stopped at: Phase 4 execution complete with bug fixes
-Resume file: .planning/phases/04-change-detection-and-auto-jump/04-VERIFICATION.md
+Last session: 2026-03-23T16:31:10.024Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

@@ -46,7 +46,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Code-to-Claude Interaction
 
-- [ ] **INTERACT-01**: User can select code in the editor and send it to Claude with a prompt via a keyboard shortcut
+- [x] **INTERACT-01**: User can select code in the editor and send it to Claude with a prompt via a keyboard shortcut
 - [ ] **INTERACT-02**: Claude automatically sees the user's current code selection as ambient context (file path, line numbers, selected text)
 
 ### Terminal
@@ -114,7 +114,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | CHNG-01 | Phase 4 | Complete |
 | CHNG-02 | Phase 4 | Complete |
 | CHNG-03 | Phase 4 | Complete |
-| INTERACT-01 | Phase 5 | Pending |
+| INTERACT-01 | Phase 5 | Complete |
 | INTERACT-02 | Phase 5 | Pending |
 | TERM-01 | Phase 6 | Pending |
 | TERM-02 | Phase 6 | Pending |
