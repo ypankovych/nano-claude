@@ -25,12 +25,25 @@ class ChatPanel(BasePanel):
         self._claude_available: bool = shutil.which("claude") is not None
 
     def compose(self) -> ComposeResult:
+        self.panel_title = "Claude Code"
         if not self._claude_available:
             msg = Static(CLAUDE_NOT_FOUND_MESSAGE, id="claude-not-found")
             msg.can_focus = True
             yield msg
         else:
+            yield Static(
+                "Starting Claude Code...",
+                id="claude-loading",
+            )
             yield TerminalWidget(command="claude", id="claude-terminal")
+
+    def on_pty_data_received(self, message) -> None:
+        """Remove loading message once Claude starts producing output."""
+        try:
+            loading = self.query_one("#claude-loading", Static)
+            loading.remove()
+        except Exception:
+            pass
 
     def on_pty_exited(self, message: PtyExited) -> None:
         """Handle PTY subprocess exit -- show exit message with restart hint."""

@@ -26,7 +26,7 @@
     display: none;
 }
 
-#claude-not-found, #claude-exited {
+#claude-loading, #claude-not-found, #claude-exited {
     width: 1fr;
     height: 1fr;
     content-align: center middle;
