@@ -106,6 +106,9 @@ class TerminalWidget(Widget, can_focus=True):
         self._running = False
         self._get_pinned_context: callable | None = None  # Set by app for ambient context
         self._input_buffer: str = ""  # Track user's typed chars for context prepend
+        self._render_dirty = False  # Throttle flag for ~30fps rendering
+        self._render_timer: threading.Timer | None = None
+        self._RENDER_INTERVAL = 0.033  # ~30fps
 
     def on_mount(self) -> None:
         """Defer PTY start until layout determines widget size."""
@@ -159,15 +162,42 @@ class TerminalWidget(Widget, can_focus=True):
         t.start()
 
     def on_pty_data_received(self, message: PtyDataReceived) -> None:
-        """Feed received PTY data into the pyte terminal emulator and status parser."""
+        """Feed received PTY data into the pyte terminal emulator and status parser.
+
+        Pyte screen buffer is updated immediately but visual refresh is
+        throttled to ~30fps to keep the rest of the app responsive.
+        """
         if self._stream is not None:
             # Strip escape sequences pyte doesn't handle (kitty keyboard, etc.)
             cleaned = _UNSUPPORTED_ESC_RE.sub("", message.data)
             self._stream.feed(cleaned)
-            self.refresh()
+            self._schedule_refresh()
         # Feed data to status parser and bubble any detected messages
         for msg in self._status_parser.feed(message.data):
             self.post_message(msg)
+
+    def _schedule_refresh(self) -> None:
+        """Mark screen dirty and schedule a refresh if not already pending.
+
+        Coalesces rapid PTY updates into ~30fps visual refreshes so the
+        rest of the app stays responsive during heavy Claude output.
+        """
+        self._render_dirty = True
+        if self._render_timer is None or not self._render_timer.is_alive():
+            self._render_timer = threading.Timer(
+                self._RENDER_INTERVAL, self._do_throttled_refresh
+            )
+            self._render_timer.daemon = True
+            self._render_timer.start()
+
+    def _do_throttled_refresh(self) -> None:
+        """Flush pending render from the timer thread."""
+        if self._render_dirty:
+            self._render_dirty = False
+            try:
+                self.app.call_from_thread(self.refresh)
+            except Exception:
+                pass
 
     def _handle_pty_exit(self) -> None:
         """Handle PTY subprocess exit."""
@@ -265,6 +295,9 @@ class TerminalWidget(Widget, can_focus=True):
     def stop_pty(self) -> None:
         """Stop the PTY subprocess."""
         self._running = False
+        if self._render_timer is not None:
+            self._render_timer.cancel()
+            self._render_timer = None
         self._pty_manager.stop()
 
     def restart_pty(self) -> None:
