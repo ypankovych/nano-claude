@@ -14,6 +14,7 @@ from nano_claude.models.file_buffer import (
     detect_language,
 )
 from nano_claude.panels.base import BasePanel
+from nano_claude.widgets.changed_files_overlay import ChangedFilesOverlay
 from nano_claude.widgets.search_overlay import SearchOverlay
 from nano_claude.widgets.searchable_text_area import SearchableTextArea
 
@@ -64,9 +65,12 @@ class EditorPanel(BasePanel):
         self._search_matches: list[tuple[int, int]] = []
         self._current_match_index: int = -1
         self._last_search_query: str = ""
+        # Change highlight state per file
+        self._file_change_highlights: dict[Path, tuple[list[int], list[int]]] = {}
 
     def compose(self):
         self.panel_title = "Editor"
+        yield ChangedFilesOverlay(id="changed-files-overlay")
         yield SearchOverlay(id="search-overlay")
         yield SearchableTextArea(
             "",
@@ -145,6 +149,13 @@ class EditorPanel(BasePanel):
         self.current_file = path
         self._update_title()
 
+        # Restore change highlights if they exist for this file
+        if path in self._file_change_highlights:
+            added, modified = self._file_change_highlights[path]
+            self._text_area.set_change_highlights(added, modified)
+        else:
+            self._text_area.clear_change_highlights()
+
     def save_current_file(self) -> None:
         """Save the current file to disk.
 
@@ -173,6 +184,87 @@ class EditorPanel(BasePanel):
         if self.current_file is not None:
             self._save_buffer_state()
         return self._buffer_manager.get_unsaved_files()
+
+    # ----- Change detection support -----
+
+    def set_change_highlights(
+        self, path: Path, added: list[int], modified: list[int]
+    ) -> None:
+        """Apply change highlights for a file.
+
+        Stores highlights so they can be restored when switching files.
+        If the file is currently displayed, applies highlights immediately.
+        """
+        self._file_change_highlights[path] = (added, modified)
+        if path == self.current_file:
+            self._text_area.set_change_highlights(added, modified)
+
+    def clear_change_highlights_for_file(self, path: Path) -> None:
+        """Remove change highlights for a file."""
+        self._file_change_highlights.pop(path, None)
+        if path == self.current_file:
+            self._text_area.clear_change_highlights()
+
+    def scroll_to_line(self, line: int) -> None:
+        """Move cursor to a specific line and scroll it into view."""
+        try:
+            doc = self._text_area.document
+            total_lines = doc.line_count
+            target_line = min(line, total_lines - 1)
+            target_line = max(0, target_line)
+            self._text_area.cursor_location = (target_line, 0)
+            self._text_area.scroll_cursor_visible()
+        except Exception:
+            pass
+
+    def reload_from_disk(self, path: Path) -> None:
+        """Reload a file from disk, preserving cursor position.
+
+        Used for auto-reload when an open file changes externally
+        and the buffer has no unsaved edits.
+        """
+        if path not in self._buffer_manager._buffers:
+            return
+
+        try:
+            new_content = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return
+
+        buf = self._buffer_manager._buffers[path]
+        # Save cursor position
+        old_cursor = buf.cursor_location
+        old_scroll = buf.scroll_offset
+
+        # Update buffer content (both original and current since it was unmodified)
+        buf.original_content = new_content
+        buf.current_content = new_content
+
+        # If this is the currently displayed file, reload the TextArea
+        if path == self.current_file:
+            self._text_area.load_text(new_content)
+            # Restore cursor, clamping to new file length
+            total_lines = self._text_area.document.line_count
+            row = min(old_cursor[0], total_lines - 1)
+            row = max(0, row)
+            line_text = self._text_area.document.get_line(row)
+            col = min(old_cursor[1], len(line_text))
+            self._text_area.cursor_location = (row, col)
+            self._update_title()
+
+    def show_changed_files(self, paths: list[Path]) -> None:
+        """Show the changed files overlay with a list of file paths."""
+        try:
+            overlay = self.query_one(ChangedFilesOverlay)
+            overlay.show_files(paths)
+        except Exception:
+            pass
+
+    def on_changed_files_overlay_file_selected(
+        self, event: ChangedFilesOverlay.FileSelected
+    ) -> None:
+        """Handle file selection from the changed files overlay."""
+        self.open_file(event.path)
 
     # ----- Search functionality -----
 
@@ -261,9 +353,16 @@ class EditorPanel(BasePanel):
             self.panel_title = name
 
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
-        """Update buffer and title when TextArea content changes."""
+        """Update buffer and title when TextArea content changes.
+
+        Also clears change highlights when user starts editing, since
+        the user's edits make the old diff markers stale.
+        """
         if self.current_file is not None:
             self._buffer_manager.update_content(
                 self.current_file, self._text_area.text
             )
             self._update_title()
+            # Clear change highlights when user edits the file
+            if self.current_file in self._file_change_highlights:
+                self.clear_change_highlights_for_file(self.current_file)

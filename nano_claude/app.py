@@ -22,6 +22,7 @@ from nano_claude.config.settings import (
 from nano_claude.panels.chat import ChatPanel
 from nano_claude.panels.editor import EditorPanel
 from nano_claude.panels.file_tree import FileTreePanel, FilteredDirectoryTree
+from nano_claude.services.change_tracker import ChangeTracker
 from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherService
 from nano_claude.terminal.status_parser import ClaudeState, CostUpdate, StatusUpdate
 
@@ -143,6 +144,72 @@ class UnsavedChangesScreen(ModalScreen[str]):
         self.dismiss("cancel")
 
 
+class ExternalChangeConflictScreen(ModalScreen[str]):
+    """Modal shown when an open file has unsaved edits AND changes on disk.
+
+    Returns: "reload" to discard edits and reload from disk,
+    "keep" to keep current edits and ignore disk change.
+    """
+
+    DEFAULT_CSS = """
+    ExternalChangeConflictScreen {
+        align: center middle;
+    }
+    #conflict-dialog {
+        width: 60;
+        height: auto;
+        max-height: 15;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+    #conflict-dialog Label {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    #conflict-buttons {
+        height: auto;
+        width: 100%;
+        align-horizontal: center;
+    }
+    #conflict-buttons Button {
+        margin: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        Binding("r", "reload", "Reload", priority=True),
+        Binding("k", "keep", "Keep", priority=True),
+        Binding("escape", "keep", "Keep", priority=True),
+    ]
+
+    def __init__(self, file_name: str, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._file_name = file_name
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="conflict-dialog"):
+            yield Label(
+                f"{self._file_name} changed on disk but has unsaved edits.\n\n"
+                "Reload from disk (lose edits) or keep current edits?"
+            )
+            with Horizontal(id="conflict-buttons"):
+                yield Button("Reload [R]", variant="warning", id="btn-reload")
+                yield Button("Keep [K]", variant="default", id="btn-keep")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-reload":
+            self.dismiss("reload")
+        elif event.button.id == "btn-keep":
+            self.dismiss("keep")
+
+    def action_reload(self) -> None:
+        self.dismiss("reload")
+
+    def action_keep(self) -> None:
+        self.dismiss("keep")
+
+
 class NanoClaudeApp(App):
     """nano-claude: a terminal-native IDE wrapper for Claude Code."""
 
@@ -162,6 +229,10 @@ class NanoClaudeApp(App):
     # Optional path from CLI
     initial_path: str | None = None
     _current_file_path: str = ""
+
+    # Change detection state
+    _last_changed_path: Path | None = None
+    _last_changed_paths: list[Path] = []
 
     BINDINGS = [
         # Panel focus -- Ctrl+letter as primary (universally supported across terminals)
@@ -192,6 +263,8 @@ class NanoClaudeApp(App):
         Binding("ctrl+s", "save_file", "Save", id="file.save", priority=True, show=True),
         # Search in editor
         Binding("ctrl+f", "toggle_search", "Find", id="editor.find", priority=True, show=True),
+        # Jump to change
+        Binding("ctrl+j", "jump_to_change", "Jump to Change", id="jump.change", priority=True, show=True),
         # Quit
         Binding("ctrl+q", "quit", "Quit", id="app.quit", priority=True),
         # Restart Claude Code subprocess
@@ -207,8 +280,12 @@ class NanoClaudeApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        """Initialize responsive collapse and start file watcher."""
+        """Initialize responsive collapse, change tracker, and file watcher."""
         self._handle_responsive_collapse(self.size.width)
+        # Initialize change tracker for diff computation
+        self._change_tracker = ChangeTracker()
+        self._last_changed_path = None
+        self._last_changed_paths = []
         # Start filesystem watcher for auto-refresh of file tree
         self._file_watcher = FileWatcherService(self, Path.cwd())
         self.run_worker(
@@ -317,9 +394,11 @@ class NanoClaudeApp(App):
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
-        """Open selected file in the editor panel."""
+        """Open selected file in the editor panel and snapshot for change tracking."""
         editor = self.query_one(EditorPanel)
         editor.open_file(event.path)
+        # Snapshot for change detection
+        self._change_tracker.ensure_snapshot(event.path)
         # Track file path separately for status bar combination
         try:
             rel = event.path.relative_to(Path.cwd())
@@ -397,16 +476,126 @@ class NanoClaudeApp(App):
             pass
 
     def on_file_system_changed(self, event: FileSystemChanged) -> None:
-        """Handle filesystem changes -- refresh the file tree.
+        """Handle filesystem changes -- refresh tree, detect changes, auto-reload.
 
         This is the SOLE handler for FileSystemChanged. App.py owns
         inter-panel coordination (FileTreePanel does NOT handle this).
         """
+        # Refresh file tree
         try:
             file_tree = self.query_one(FileTreePanel)
             self.run_worker(
                 file_tree.reload_preserving_state(), name="tree-reload"
             )
+        except Exception:
+            pass
+
+        # Process file changes for editor
+        from watchfiles import Change
+
+        try:
+            editor = self.query_one(EditorPanel)
+        except Exception:
+            return
+
+        changed_paths: list[Path] = []
+
+        for change_type, path_str in event.changes:
+            if change_type in (Change.modified, Change.added):
+                path = Path(path_str)
+                if not path.is_file():
+                    continue
+
+                # Compute diff if we have a snapshot
+                file_change = self._change_tracker.compute_change(path)
+
+                # Auto-reload open buffers
+                if path in editor._buffer_manager._buffers:
+                    buf = editor._buffer_manager._buffers[path]
+                    if buf.is_modified:
+                        # Conflict: unsaved edits + disk change
+                        self._show_conflict_prompt(path)
+                    else:
+                        # Silent auto-reload
+                        editor.reload_from_disk(path)
+
+                # Track changed paths for notification
+                if file_change is not None:
+                    changed_paths.append(path)
+                    editor.set_change_highlights(
+                        path, file_change.added_lines, file_change.modified_lines
+                    )
+
+        # Show notification
+        if len(changed_paths) == 1:
+            name = changed_paths[0].name
+            self.notify(
+                f"File changed: [bold]{name}[/bold] | Ctrl+J to jump",
+                title="Change Detected",
+                severity="information",
+                timeout=8,
+            )
+            self._last_changed_path = changed_paths[0]
+            self._last_changed_paths = changed_paths
+        elif len(changed_paths) > 1:
+            names = ", ".join(p.name for p in changed_paths[:3])
+            suffix = f" +{len(changed_paths) - 3} more" if len(changed_paths) > 3 else ""
+            self.notify(
+                f"{len(changed_paths)} files changed: {names}{suffix} | Ctrl+J to jump",
+                title="Changes Detected",
+                severity="information",
+                timeout=8,
+            )
+            self._last_changed_path = changed_paths[0]
+            self._last_changed_paths = changed_paths
+
+    def _show_conflict_prompt(self, path: Path) -> None:
+        """Show conflict dialog when a file has unsaved edits and disk changes."""
+
+        def _handle_conflict_response(response: str) -> None:
+            if response == "reload":
+                try:
+                    editor = self.query_one(EditorPanel)
+                    editor.reload_from_disk(path)
+                except Exception:
+                    pass
+
+        self.push_screen(
+            ExternalChangeConflictScreen(path.name),
+            callback=_handle_conflict_response,
+        )
+
+    def action_jump_to_change(self) -> None:
+        """Jump to the most recently changed file (Ctrl+J).
+
+        If multiple files changed, shows the changed-files overlay.
+        If a single file changed, opens it and scrolls to the first changed line.
+        """
+        if self._last_changed_paths and len(self._last_changed_paths) > 1:
+            # Multiple changed files -- show overlay
+            try:
+                editor = self.query_one(EditorPanel)
+                editor.show_changed_files(self._last_changed_paths)
+            except Exception:
+                pass
+            return
+
+        path = self._last_changed_path
+        if path is None:
+            self.notify("No recent changes to jump to", severity="warning")
+            return
+
+        try:
+            editor = self.query_one(EditorPanel)
+            # Ensure snapshot before opening
+            self._change_tracker.ensure_snapshot(path)
+            editor.open_file(path)
+            # Scroll to first changed line
+            change = self._change_tracker.get_pending_change(path)
+            if change is not None:
+                all_changed = sorted(change.added_lines + change.modified_lines)
+                if all_changed:
+                    editor.scroll_to_line(all_changed[0])
         except Exception:
             pass
 

@@ -33,7 +33,9 @@ from nano_claude.terminal.status_parser import StatusParser
 # Keys reserved for app-level bindings -- do NOT capture these.
 RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+b",
+    "ctrl+d",
     "ctrl+e",
+    "ctrl+j",
     "ctrl+r",
     "ctrl+q",
     "ctrl+equal",

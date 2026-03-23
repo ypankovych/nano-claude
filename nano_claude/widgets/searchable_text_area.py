@@ -1,4 +1,4 @@
-"""SearchableTextArea: TextArea subclass with multi-match highlighting support."""
+"""SearchableTextArea: TextArea subclass with multi-match and change highlighting."""
 
 from __future__ import annotations
 
@@ -9,23 +9,30 @@ from textual.widgets.text_area import Selection
 
 
 class SearchableTextArea(TextArea):
-    """TextArea subclass that highlights ALL search matches simultaneously.
+    """TextArea subclass that highlights ALL search matches and change markers.
 
-    Per user decision: all matches highlighted in the file simultaneously,
+    Search highlights: all matches highlighted simultaneously,
     current match in a different/brighter color.
 
-    Non-current matches: muted grey background.
-    Current match: bright yellow background with black text.
+    Change highlights: added lines get green background tint,
+    modified lines get yellow/goldenrod background tint. Applied
+    UNDER search highlights so search always wins visually.
     """
 
     _MATCH_STYLE: Style = Style(bgcolor="grey30")
     _CURRENT_MATCH_STYLE: Style = Style(bgcolor="yellow", color="black")
+    _ADDED_LINE_STYLE: Style = Style(bgcolor="dark_green")
+    _MODIFIED_LINE_STYLE: Style = Style(bgcolor="dark_goldenrod")
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._match_positions: list[tuple[int, int]] = []
         self._match_query_len: int = 0
         self._current_match_index: int = -1
+        # Change highlight state
+        self._added_lines: set[int] = set()
+        self._modified_lines: set[int] = set()
+        self._change_highlights_active: bool = False
 
     def set_search_matches(
         self, matches: list[tuple[int, int]], query_len: int
@@ -65,20 +72,69 @@ class SearchableTextArea(TextArea):
         self._line_cache.clear()
         self.refresh()
 
-    def render_line(self, y: int) -> Strip:
-        """Render a line with search match highlighting applied.
+    # ----- Change highlight methods -----
 
-        Calls the parent render_line for default rendering, then overlays
-        match highlight styles at the correct positions.
+    def set_change_highlights(
+        self, added: list[int], modified: list[int]
+    ) -> None:
+        """Set change highlight line sets and trigger re-render.
+
+        Args:
+            added: 0-indexed line numbers of added lines (green tint).
+            modified: 0-indexed line numbers of modified lines (yellow tint).
         """
-        strip = super().render_line(y)
+        self._added_lines = set(added)
+        self._modified_lines = set(modified)
+        self._change_highlights_active = True
+        self._line_cache.clear()
+        self.refresh()
 
-        if not self._match_positions or self._match_query_len == 0:
-            return strip
+    def clear_change_highlights(self) -> None:
+        """Clear all change highlights."""
+        self._added_lines = set()
+        self._modified_lines = set()
+        self._change_highlights_active = False
+        self._line_cache.clear()
+        self.refresh()
 
-        # Determine which document row this visual line y corresponds to
+    # ----- Rendering -----
+
+    def render_line(self, y: int) -> Strip:
+        """Render a line with change and search highlighting applied.
+
+        Layering order:
+        1. Base TextArea rendering (syntax highlighting)
+        2. Change highlights (full-line background tint) -- UNDER search
+        3. Search highlights (character-range, brighter) -- ON TOP
+        """
+        # Step 1: Get base strip from TextArea (syntax highlighting only)
+        strip = TextArea.render_line(self, y)
+
         scroll_x, scroll_y = self.scroll_offset
         doc_row = scroll_y + y
+
+        # Step 2: Apply change highlight (full-line background tint)
+        if self._change_highlights_active:
+            if doc_row in self._added_lines:
+                strip = self._apply_style_to_range(
+                    strip, 0, strip.cell_length, self._ADDED_LINE_STYLE
+                )
+            elif doc_row in self._modified_lines:
+                strip = self._apply_style_to_range(
+                    strip, 0, strip.cell_length, self._MODIFIED_LINE_STYLE
+                )
+
+        # Step 3: Apply search highlights (character-range, on top)
+        strip = self._apply_search_highlights(strip, doc_row, scroll_x)
+
+        return strip
+
+    def _apply_search_highlights(
+        self, strip: Strip, doc_row: int, scroll_x: int
+    ) -> Strip:
+        """Apply search match highlighting to a strip for a given document row."""
+        if not self._match_positions or self._match_query_len == 0:
+            return strip
 
         # Find all matches on this document row
         row_matches = [
@@ -114,7 +170,9 @@ class SearchableTextArea(TextArea):
             visual_end = min(strip_width, visual_end)
 
             # Apply style by cropping, styling, and rejoining the strip
-            strip = self._apply_style_to_range(strip, visual_start, visual_end, style)
+            strip = self._apply_style_to_range(
+                strip, visual_start, visual_end, style
+            )
 
         return strip
 
