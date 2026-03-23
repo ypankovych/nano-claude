@@ -414,6 +414,7 @@ class EditorPanel(BasePanel):
         """
         if self._reload_count > 0:
             self._reload_count -= 1
+            event.stop()  # Don't bubble to app — prevents clearing change state
             return
         if self.current_file is not None:
             self._buffer_manager.update_content(
