@@ -36,17 +36,20 @@ RESERVED_KEYS: frozenset[str] = frozenset({
     "ctrl+b",
     "ctrl+d",
     "ctrl+e",
+    "ctrl+f",
+    "ctrl+h",
     "ctrl+j",
     "ctrl+l",        # send selection to Claude
+    "ctrl+n",        # new terminal tab
     "ctrl+p",        # pin/unpin ambient context
-    "ctrl+r",
     "ctrl+q",
+    "ctrl+r",
+    "ctrl+s",
+    "ctrl+t",        # toggle terminal panel
+    "ctrl+w",        # close terminal tab
     "ctrl+equal",
     "ctrl+minus",
     "ctrl+backslash",
-    "ctrl+h",
-    "ctrl+s",
-    "ctrl+f",
     "ctrl+1",
     "ctrl+2",
     "ctrl+3",

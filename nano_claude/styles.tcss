@@ -45,3 +45,32 @@
     height: 1fr;
     background: $surface;
 }
+
+/* --- Terminal Panel --- */
+
+#terminal-panel {
+    height: auto;
+    min-height: 1;
+}
+
+#terminal-panel #terminal-tab-bar {
+    height: 1;
+    background: $boost;
+    color: $text;
+    padding: 0 1;
+}
+
+#terminal-panel #terminal-switcher {
+    height: 1fr;
+}
+
+#terminal-panel #terminal-status-line {
+    height: 1;
+    background: $surface;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#app-layout {
+    height: 1fr;
+}
