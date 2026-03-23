@@ -530,14 +530,29 @@ class NanoClaudeApp(App):
                 # Compute diff if we have a snapshot
                 file_change = self._change_tracker.compute_change(path)
 
+                # DEBUG: log what compute_change returned
+                if file_change is not None:
+                    _added = len(file_change.added_lines)
+                    _modified = len(file_change.modified_lines)
+                    _match = path.resolve() == (editor.current_file.resolve() if editor.current_file else None)
+                    self.notify(
+                        f"[DEBUG] change: +{_added} ~{_modified} | match={_match} | path={path.name}",
+                        severity="warning", timeout=15,
+                    )
+                else:
+                    self.notify(f"[DEBUG] compute_change returned None for {path.name}", severity="error", timeout=10)
+
                 # Auto-reload open buffers
-                if path in editor._buffer_manager._buffers:
-                    buf = editor._buffer_manager._buffers[path]
+                in_buffer = path in editor._buffer_manager._buffers
+                # Also check resolved path
+                resolved = path.resolve()
+                in_buffer_resolved = resolved in editor._buffer_manager._buffers
+                if in_buffer or in_buffer_resolved:
+                    buf_path = path if in_buffer else resolved
+                    buf = editor._buffer_manager._buffers[buf_path]
                     if buf.is_modified:
-                        # Conflict: unsaved edits + disk change
                         self._show_conflict_prompt(path)
                     else:
-                        # Silent auto-reload
                         editor.reload_from_disk(path)
 
                 # Track changed paths for notification and jump
