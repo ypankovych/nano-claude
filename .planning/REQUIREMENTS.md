@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Change Detection
 
 - [x] **CHNG-01**: When Claude edits a file, the editor automatically jumps to that file and highlights the changed lines
-- [ ] **CHNG-02**: User can toggle a git-style diff view (green additions, red deletions) of Claude's changes via a keyboard shortcut
+- [x] **CHNG-02**: User can toggle a git-style diff view (green additions, red deletions) of Claude's changes via a keyboard shortcut
 - [x] **CHNG-03**: A filesystem watcher detects external file changes (git operations, other tools) and auto-reloads open files
 
 ### Code-to-Claude Interaction
@@ -112,7 +112,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | CLAUDE-04 | Phase 3 | Pending |
 | CLAUDE-05 | Phase 3 | Pending |
 | CHNG-01 | Phase 4 | Complete |
-| CHNG-02 | Phase 4 | Pending |
+| CHNG-02 | Phase 4 | Complete |
 | CHNG-03 | Phase 4 | Complete |
 | INTERACT-01 | Phase 5 | Pending |
 | INTERACT-02 | Phase 5 | Pending |
