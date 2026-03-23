@@ -104,3 +104,19 @@ CLAUDE_RESTART_KEY = "ctrl+shift+r"
 
 # Claude status display
 CLAUDE_STATUS_SEPARATOR = " | "
+
+# ---------------------------------------------------------------------------
+# Terminal panel
+# ---------------------------------------------------------------------------
+
+TERMINAL_PANEL_HEIGHT = "30%"  # Fixed height when expanded
+TERMINAL_MIN_HEIGHT = 8        # Minimum rows to display
+TERMINAL_MAX_TABS = 8          # Maximum concurrent shell sessions
+
+SHELL_EXITED_MESSAGE = """\
+Shell exited (code: {exit_code}).
+
+Press Ctrl+T to reopen or Ctrl+N for a new tab."""
+
+TERMINAL_STATUS_IDLE = " Terminal (idle) | Ctrl+T to open "
+TERMINAL_STATUS_RUNNING = " Terminal ({count} tab{s}) | Ctrl+T to focus "
