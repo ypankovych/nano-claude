@@ -26,6 +26,42 @@ from nano_claude.services.file_watcher import FileSystemChanged, FileWatcherServ
 from nano_claude.terminal.status_parser import ClaudeState, CostUpdate, StatusUpdate
 
 
+class ShutdownScreen(ModalScreen):
+    """Full-screen shutdown banner shown while the app exits."""
+
+    DEFAULT_CSS = """
+    ShutdownScreen {
+        align: center middle;
+        background: $surface 90%;
+    }
+    #shutdown-box {
+        width: 50;
+        height: auto;
+        padding: 2 4;
+        background: $surface;
+        border: thick $accent;
+        content-align: center middle;
+    }
+    #shutdown-box Label {
+        width: 100%;
+        text-align: center;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="shutdown-box"):
+            yield Label("nano-claude")
+            yield Label("")
+            yield Label("Shutting down...")
+            yield Label("Stopping Claude Code and file watcher")
+
+    def on_mount(self) -> None:
+        self.set_timer(0.1, self._do_shutdown)
+
+    def _do_shutdown(self) -> None:
+        self.app._do_final_exit()
+
+
 class UnsavedChangesScreen(ModalScreen[str]):
     """Modal screen prompting user about unsaved changes before quitting.
 
@@ -404,20 +440,16 @@ class NanoClaudeApp(App):
             self._graceful_exit()
 
     def _graceful_exit(self) -> None:
-        """Shut down subprocesses and exit cleanly."""
-        self.notify("Shutting down...", severity="information")
+        """Show shutdown banner, then exit."""
+        self.push_screen(ShutdownScreen())
 
-        # Kill Claude PTY
+    def _do_final_exit(self) -> None:
+        """Called by ShutdownScreen after it renders."""
         self._stop_claude_pty()
-
-        # Stop file watcher
         if hasattr(self, "_file_watcher"):
             self._file_watcher.stop()
-
-        # Cancel all workers so self.exit() doesn't wait for them
         for worker in self.workers:
             worker.cancel()
-
         self.exit()
         # "cancel" -- do nothing, return to editor
 
