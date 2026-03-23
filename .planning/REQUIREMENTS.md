@@ -51,8 +51,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Terminal
 
-- [ ] **TERM-01**: User can toggle a terminal panel via a keyboard shortcut
-- [ ] **TERM-02**: Terminal panel is a full PTY-based terminal supporting interactive commands (npm start, git, etc.)
+- [x] **TERM-01**: User can toggle a terminal panel via a keyboard shortcut
+- [x] **TERM-02**: Terminal panel is a full PTY-based terminal supporting interactive commands (npm start, git, etc.)
 - [ ] **TERM-03**: User can switch focus between terminal panel and other panels with keyboard shortcuts
 
 ## v2 Requirements
@@ -116,8 +116,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | CHNG-03 | Phase 4 | Complete |
 | INTERACT-01 | Phase 5 | Complete |
 | INTERACT-02 | Phase 5 | Complete |
-| TERM-01 | Phase 6 | Pending |
-| TERM-02 | Phase 6 | Pending |
+| TERM-01 | Phase 6 | Complete |
+| TERM-02 | Phase 6 | Complete |
 | TERM-03 | Phase 6 | Pending |
 
 **Coverage:**
