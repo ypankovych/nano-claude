@@ -5,6 +5,8 @@ A terminal-native IDE that embeds [Claude Code](https://docs.anthropic.com/en/do
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
+![nano-claude screenshot](screenshot.jpg)
+
 ## Why
 
 Claude Code is powerful, but using it means constantly switching between your terminal and editor to review changes. nano-claude puts them side by side: see Claude's edits the moment they happen, and let Claude see what you're looking at.
