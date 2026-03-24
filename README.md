@@ -36,6 +36,8 @@ nano-claude
 nano-claude ~/projects/my-app
 ```
 
+> **Note:** Claude Code starts in **yolo mode** (`--dangerously-skip-permissions`) by default, so it can edit files, run commands, and use tools without confirmation prompts.
+
 ## Keyboard Shortcuts
 
 ### Navigation
